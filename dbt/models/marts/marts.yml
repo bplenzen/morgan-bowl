@@ -28,3 +28,44 @@ models:
         description: "Total losses counted from fct_matchups."
       - name: win_pct
         description: "Wins divided by games played."
+  
+  - name: fct_justice_record
+    description: "Justice record (median wins) vs actual record to measure luck. Teams scoring above the weekly median earn 'justice wins'. Luck differential shows how lucky/unlucky each team has been."
+    columns:
+      - name: roster_id
+        tests:
+          - not_null
+          - unique
+      - name: justice_wins
+        description: "Number of weeks scoring above the median (deserved wins)"
+        tests:
+          - not_null
+      - name: actual_wins
+        description: "Actual head-to-head wins"
+        tests:
+          - not_null
+      - name: luck_differential
+        description: "actual_wins - justice_wins. Positive = lucky, negative = unlucky"
+        tests:
+          - not_null
+      - name: luck_status
+        description: "Human-readable luck interpretation with emojis"
+        tests:
+          - accepted_values:
+              values: ['VERY LUCKY 🍀🍀', 'Lucky 🍀', 'Fair ⚖️', 'Unlucky 😞', 'VERY UNLUCKY 😭😭']
+  
+  - name: fct_advanced_luck
+    description: "Advanced luck analysis using multiple statistical approaches: all-play record, expected wins, schedule strength, close game performance, and composite luck score."
+    columns:
+      - name: roster_id
+        tests:
+          - not_null
+          - unique
+      - name: expected_wins
+        description: "Projected wins based on all-play win percentage (if you played everyone each week)"
+      - name: wins_over_expected
+        description: "Actual wins minus expected wins. Most sophisticated luck metric."
+      - name: composite_luck_score
+        description: "0-100 scale combining multiple luck factors. 50 = average, >50 = lucky, <50 = unlucky"
+      - name: all_play_win_pct
+        description: "Percentage of all possible matchups you would have won"

@@ -1,0 +1,87 @@
+{{ config(materialized='table') }}
+
+-- Rank teams by points each week (1 = highest scorer, 12 = lowest scorer)
+with weekly_ranks as (
+    select
+        m.week,
+        m.roster_id,
+        m.owner_id,
+        m.manager_name,
+        m.points,
+        -- Rank teams by points (highest = 1)
+        row_number() over (partition by m.week order by m.points desc) as points_rank,
+        -- Also track actual win from matchup
+        m.win_flag as actual_win
+    from {{ ref('fct_matchups') }} as m
+),
+
+-- Determine if each team was in top 6 (justice win) or bottom 6 (justice loss)
+weekly_justice_wins as (
+    select
+        week,
+        roster_id,
+        owner_id,
+        manager_name,
+        points,
+        points_rank,
+        -- Justice win if you're in the top 6 scorers that week
+        case
+            when points_rank <= 6 then 1
+            else 0
+        end as justice_win,
+        actual_win
+    from weekly_ranks
+),
+
+-- Aggregate to season totals
+season_totals as (
+    select
+        roster_id,
+        owner_id,
+        manager_name,
+        count(*) as weeks_played,
+        -- Justice record (wins against median)
+        sum(justice_win) as justice_wins,
+        count(*) - sum(justice_win) as justice_losses,
+        -- Actual record
+        sum(case when actual_win = 1 then 1 else 0 end) as actual_wins,
+        sum(case when actual_win = 0 then 1 else 0 end) as actual_losses,
+        -- Average points
+        avg(points) as avg_points_per_week
+    from weekly_justice_wins
+    group by roster_id, owner_id, manager_name
+)
+
+select
+    roster_id,
+    owner_id,
+    manager_name,
+    weeks_played,
+    
+    -- Justice record
+    justice_wins,
+    justice_losses,
+    round(justice_wins::double / weeks_played, 3) as justice_win_pct,
+    
+    -- Actual record
+    actual_wins,
+    actual_losses,
+    round(actual_wins::double / weeks_played, 3) as actual_win_pct,
+    
+    -- The LUCK METRIC!
+    actual_wins - justice_wins as luck_differential,
+    
+    -- Luck interpretation
+    case
+        when actual_wins - justice_wins > 1 then 'VERY LUCKY 🍀🍀'
+        when actual_wins - justice_wins = 1 then 'Lucky 🍀'
+        when actual_wins - justice_wins = 0 then 'Fair ⚖️'
+        when actual_wins - justice_wins = -1 then 'Unlucky 😞'
+        when actual_wins - justice_wins < -1 then 'VERY UNLUCKY 😭😭'
+    end as luck_status,
+    
+    -- Supporting stats
+    round(avg_points_per_week, 2) as avg_points_per_week
+
+from season_totals
+order by luck_differential desc, justice_wins desc
