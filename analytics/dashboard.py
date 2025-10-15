@@ -195,10 +195,10 @@ elif page == "🍀 Justice Rankings":
     st.header("Justice Rankings - Who's Lucky? Who's Unlucky?")
     
     st.markdown("""
-    **How it works:** Each week, the top 6 scorers get a "justice win" and the bottom 6 get a "justice loss". 
-    Your **justice record** is what your record *should* be based on scoring. Compare it to your actual record to see luck!
+    Each week, the top 6 scorers get a win and the bottom 6 get a loss. Your justice record is what 
+    your record would be based purely on scoring. Compare it to your actual record to see if you've been lucky or unlucky.
     
-    *This is the simple approach. For advanced stats nerds, check out "🤓 Nerd Shit".*
+    *For more detailed stats, check out "🤓 Nerd Shit".*
     """)
     
     justice_df = load_justice_record()
@@ -265,14 +265,20 @@ elif page == "🤓 Nerd Shit":
     st.header("🤓 Advanced Luck Analytics (Nerd Shit)")
     
     st.markdown("""
-    **For the data nerds**: This uses advanced statistical methods to calculate luck more precisely than the simple Justice Rankings.
+    **Composite Luck Score Formula:**
+    ```
+    50 (baseline) + 
+    (Wins Over Expected × 10) +        [60% weight]
+    (Schedule Luck Index × -0.5) +     [20% weight]
+    (Close Game Win% - 0.5) × 20       [20% weight]
+    ```
     
     **Key Metrics:**
-    - **Expected Wins**: Based on "all-play" record (if you played everyone each week, what % would you win?)
-    - **Wins Over Expected**: Your actual wins minus expected wins (most accurate luck metric)
-    - **Schedule Luck**: Did you face opponents on their hot weeks or cold weeks?
-    - **Close Game Record**: Performance in games decided by <10 points
-    - **Composite Luck Score**: 0-100 scale combining all factors (50 = average)
+    - **Expected Wins**: If you played everyone each week, how many total games would you win? That percentage × games played = expected wins.
+    - **Wins Over Expected**: Actual wins minus expected wins. The most direct measure of luck.
+    - **Schedule Luck Index**: Difference between opponent's actual score and their season average. Positive = you faced tough opponents (unlucky).
+    - **Close Games**: Games decided by <10 points. Essentially coin flips.
+    - **Composite Luck Score**: 0-100 scale combining all factors (50 = average luck).
     """)
     
     advanced_df = load_advanced_luck()
