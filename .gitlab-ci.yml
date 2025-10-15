@@ -1,0 +1,119 @@
+# GitLab CI/CD Pipeline for Morgan Bowl Fantasy Football Data Pipeline
+# This pipeline runs weekly to ingest fantasy football data and update analytics
+
+# Define stages
+stages:
+  - ingest
+  - build
+  - test
+
+# Global variables
+variables:
+  # Python version to use
+  PYTHON_VERSION: "3.11"
+  # Poetry version
+  POETRY_VERSION: "1.8.2"
+
+# Template for Python setup (reusable)
+.python-setup: &python-setup
+  image: python:3.11-slim
+  before_script:
+    - apt-get update && apt-get install -y curl git
+    - curl -sSL https://install.python-poetry.org | python3 - --version $POETRY_VERSION
+    - export PATH="/root/.local/bin:$PATH"
+    - poetry --version
+    - poetry config virtualenvs.in-project true
+    - poetry install --no-interaction --no-ansi
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - .venv/
+      - data/
+
+# Job 1: Weekly Data Ingestion
+ingest:weekly:
+  <<: *python-setup
+  stage: ingest
+  script:
+    - echo "🏈 Starting weekly data ingestion..."
+    - poetry run python scripts/weekly_ingestion.py
+  artifacts:
+    # Store the database file so downstream jobs can use it
+    paths:
+      - data/warehouse.duckdb
+    expire_in: 7 days
+  # Only run on scheduled pipelines (not on every commit)
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "web"  # Also allow manual runs
+  environment:
+    name: production
+
+# Job 2: Run DBT Tests
+test:dbt:
+  <<: *python-setup
+  stage: test
+  script:
+    - echo "🧪 Running DBT tests..."
+    - cd dbt
+    - poetry run dbt test
+  needs:
+    - ingest:weekly
+  artifacts:
+    reports:
+      junit: dbt/target/junit.xml
+    paths:
+      - dbt/target/
+    expire_in: 7 days
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+# Job 3: Run Python Unit Tests
+test:python_unit:
+  <<: *python-setup
+  stage: test
+  script:
+    - echo "🧪 Running Python unit tests..."
+    - poetry run pytest tests/ingestion/ -v --junitxml=unit_report.xml
+  artifacts:
+    reports:
+      junit: unit_report.xml
+    expire_in: 7 days
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+# Job 4: Run API Parity Tests (Data Validation)
+test:api_parity:
+  <<: *python-setup
+  stage: test
+  script:
+    - echo "🔍 Validating data against Sleeper API (SOURCE OF TRUTH)..."
+    - poetry run pytest tests/integration/test_api_parity.py -v --junitxml=api_parity_report.xml
+  needs:
+    - ingest:weekly
+  artifacts:
+    reports:
+      junit: api_parity_report.xml
+    expire_in: 7 days
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "web"
+  allow_failure: false  # CRITICAL: Block pipeline if data doesn't match API
+
+# Optional: Manual trigger job (run anytime)
+ingest:manual:
+  <<: *python-setup
+  stage: ingest
+  script:
+    - echo "🏈 Manual data ingestion triggered..."
+    - poetry run python scripts/weekly_ingestion.py
+  artifacts:
+    paths:
+      - data/warehouse.duckdb
+    expire_in: 7 days
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "web"
+      when: manual
+  allow_failure: true

@@ -1,0 +1,37 @@
+version: 2
+
+exposures:
+  - name: league_standings_dashboard
+    label: "League Standings"
+    type: dashboard
+    maturity: low
+    description: "Lightdash dashboard summarizing wins, losses, and points by roster."
+    depends_on:
+      - ref('fct_standings')
+    owner:
+      name: Ben Lenzen
+      email: benlenzen@example.com
+
+  - name: matchup_tracker_dashboard
+    label: "Matchup Tracker"
+    type: dashboard
+    maturity: low
+    description: "Lightdash dashboard showing weekly matchup results and point differentials."
+    depends_on:
+      - ref('fct_matchups')
+    owner:
+      name: Ben Lenzen
+      email: benlenzen@example.com
+
+  - name: team_profile_dashboard
+    label: "Team Profile"
+    type: dashboard
+    maturity: low
+    description: "Lightdash view combining standings and roster metadata for a single team."
+    depends_on:
+      - ref('fct_standings')
+      - ref('stg_rosters')
+      - ref('stg_users')
+    owner:
+      name: Ben Lenzen
+      email: benlenzen@example.com

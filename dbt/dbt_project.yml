@@ -1,0 +1,29 @@
+name: "morgan_bowl_dbt"
+version: "1.0.0"
+config-version: 2
+
+profile: "morgan-bowl"
+
+model-paths: ["models"]
+analysis-paths: ["analysis"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+dispatch:
+  - macro_namespace: dbt
+    search_order: [dbt, dbt_duckdb]
+
+models:
+  morgan_bowl_dbt:
+    +schema: analytics
+    +materialized: table
+    staging:
+      +schema: staging
+      +materialized: view
+      tests:
+        - assert_two_rosters_per_matchup
+    marts:
+      +schema: analytics
+      +materialized: table

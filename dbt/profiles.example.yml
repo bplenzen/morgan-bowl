@@ -1,0 +1,10 @@
+morgan_bowl:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('DUCKDB_PATH', 'data/processed/warehouse.duckdb') }}"
+      threads: 4
+      schema: analytics
+      extensions:
+        - httpfs

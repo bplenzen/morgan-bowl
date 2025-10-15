@@ -1,0 +1,30 @@
+version: 2
+
+models:
+  - name: fct_matchups
+    description: "Fact table describing roster performance per matchup/week."
+    columns:
+      - name: week
+        tests:
+          - not_null
+      - name: matchup_id
+        tests:
+          - not_null
+      - name: roster_id
+        tests:
+          - not_null
+      - name: win_flag
+        description: "1 if roster won the matchup, 0 if lost, null if opponent missing."
+  - name: fct_standings
+    description: "Aggregated standings metrics by roster and manager."
+    columns:
+      - name: roster_id
+        tests:
+          - not_null
+          - unique
+      - name: wins
+        description: "Total wins counted from fct_matchups."
+      - name: losses
+        description: "Total losses counted from fct_matchups."
+      - name: win_pct
+        description: "Wins divided by games played."

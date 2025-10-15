@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: stg_league
+    description: "League metadata with standardized field names."
+    columns:
+      - name: league_id
+        tests:
+          - not_null
+          - unique
+      - name: name
+        description: "League display name from Sleeper."
+  - name: stg_users
+    description: "Normalized view of Sleeper users for the league."
+    columns:
+      - name: user_id
+        tests:
+          - not_null
+          - unique
+  - name: stg_rosters
+    description: "Normalized roster view including owner relationships."
+    columns:
+      - name: roster_id
+        tests:
+          - not_null
+          - unique
+      - name: owner_id
+        tests:
+          - not_null
+  - name: stg_matchups
+    description: "Union of matchup results across ingested weeks."
+    columns:
+      - name: week
+        tests:
+          - not_null
+      - name: matchup_id
+        tests:
+          - not_null
+      - name: roster_id
+        tests:
+          - not_null

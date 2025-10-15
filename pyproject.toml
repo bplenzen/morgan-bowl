@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "morgan-bowl"
+version = "0.1.0"
+description = "End-to-end DataOps lab for Sleeper fantasy football data"
+authors = ["Ben Lenzen"]
+readme = "README.md"
+packages = [
+    { include = "morgan_bowl", from = "src" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+httpx = ">=0.27,<0.28"
+pydantic = ">=2.7,<3.0"
+duckdb = ">=1.1,<1.2"
+polars = ">=0.20,<0.21"
+python-dotenv = ">=1.0,<2.0"
+structlog = ">=24.1,<25.0"
+tenacity = ">=9.1,<10.0"
+dbt-core = "^1.10.0"
+dbt-duckdb = "^1.9.0"
+pyarrow = "^21.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.0"
+ruff = "^0.5.0"
+black = "^24.4"
+isort = "^5.13"
+mypy = "^1.10"
+pre-commit = "^3.7"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

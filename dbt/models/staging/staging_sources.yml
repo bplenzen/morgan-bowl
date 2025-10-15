@@ -1,0 +1,37 @@
+version: 2
+
+sources:
+  - name: staging
+    description: "Raw ingestion tables produced by the Sleeper pipeline."
+    schema: staging
+    tables:
+      - name: league
+        description: "League metadata from Sleeper."
+      - name: users
+        description: "Managers and owners associated with the league."
+      - name: rosters
+        description: "Roster assignments referencing Sleeper roster IDs."
+      - name: matchups_week_01
+        description: "Week 1 matchup results."
+      - name: matchups_week_02
+        description: "Week 2 matchup results."
+      - name: matchups_week_03
+        description: "Week 3 matchup results."
+      - name: matchups_week_04
+        description: "Week 4 matchup results."
+      - name: matchups_week_05
+        description: "Week 5 matchup results."
+      - name: matchups_week_06
+        description: "Week 6 matchup results."
+      - name: transactions_week_01
+        description: "Week 1 transactions (waivers/trades)."
+      - name: transactions_week_02
+        description: "Week 2 transactions (waivers/trades)."
+      - name: transactions_week_03
+        description: "Week 3 transactions (waivers/trades)."
+      - name: transactions_week_04
+        description: "Week 4 transactions (waivers/trades)."
+      - name: transactions_week_05
+        description: "Week 5 transactions (waivers/trades)."
+      - name: transactions_week_06
+        description: "Week 6 transactions (waivers/trades)."
