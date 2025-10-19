@@ -16,15 +16,33 @@
 
 ## 🚀 Version 1.1.0 - Advanced Analytics (NEXT RELEASE)
 
+### Configuration & Portability
+
+**1. Universal League Configuration** 🌍 **[HIGH PRIORITY]**
+   - **Goal**: Make Morgan Bowl work for ANY Sleeper league with just a league ID
+   - **Current State**: Already has `SLEEPER_LEAGUE_ID` env var, league_size/playoff_teams in DBT vars
+   - **Needed Changes**:
+     - Create comprehensive `league_config.yml` for league-specific settings
+     - Add validation to ensure config matches actual league (12 teams = 12 teams)
+     - Auto-detect league settings from Sleeper API where possible:
+       - Total teams (roster count)
+       - Playoff teams (from league settings)
+       - Scoring type (PPR, Half-PPR, Standard)
+       - Regular season weeks (from league settings)
+     - Update README with "Quick Start: Any League" instructions
+   - **Files to modify**:
+     - `src/ingestion/config.py` - Expand config class
+     - `src/ingestion/pipeline.py` - Fetch league settings from API
+     - `dbt/dbt_project.yml` - Auto-populate vars from ingested data
+     - `README.md` - Add "Use in Your League" section
+   - **Future Enhancement**: ESPN & Yahoo league import (v2.0+)
+   - **Impact**: VERY HIGH - Makes project usable by anyone
+   - **Complexity**: Medium (4-6 hours)
+   - **Effort**: One-time setup, huge reusability benefit
+
 ### Player Analytics & Insights
 
-6. **Playoff Probability Simulator** 🎲
-   - Monte Carlo simulation for playoff chances
-   - New model: `dbt/models/marts/fct_playoff_probability.sql`
-   - Simulate remaining games 10,000 times
-   - Calculate % chance each team makes playoffs
-   - Impact: HIGH - League mates love seeing their playoff odds
-   - Complexity: Medium (3-4 hours)
+6. **Strength of Schedule Analysis** 📊
 
 7. **Strength of Schedule Analysis** 📊
    - Track opponent difficulty over time
@@ -291,35 +309,44 @@
 
 ### Immediate (This Week)
 
-1. ✅ Version 1.0.0 - COMPLETED
-2. 🔴 Critical fixes (#1-2)
-3. 📧 Enable notifications (#12) - High impact, low effort!
+1. ✅ Version 1.0.1 - COMPLETED (Oct 19, 2025)
+2. 🌍 **Universal League Configuration (#1)** - Make it work for ANY league!
+3. 📊 **Strength of Schedule (#6)** - Easy analytics win
 
-### Short Term (Next 2-4 Weeks)
+### Short Term (Next 2-4 Weeks) - v1.1.0
 
-4. 🟡 High priority fixes (#3-5)
-5. 🚑 **Injury Impact Analysis (#8)** - NEW! League mates will love this
-6. 📊 **Draft Performance Analysis (#9)** - NEW! Great for roasting bad picks
-7. 🎲 Playoff simulator (#6) - Most exciting feature
-8. 📊 Strength of schedule (#7) - Easy win
+4.  **Injury Impact Analysis (#8)** - League mates will love this
+5. 📊 **Draft Performance Analysis (#9)** - Great for roasting bad picks
+6. 📧 Enable notifications (#10) - Already coded, just needs env vars!
+
+### Deferred Features
+
+- 🎲 **Playoff Probability Simulator** - Postponed (complex, less immediate value)
+  - Will revisit in v1.2.0 or v2.0.0
+  - Focus on league portability and core analytics first
 
 ### Medium Term (Next Quarter)
 
-9. 🏈 Player analytics (#10)
-10. 🔐 Security hardening (#13-15)
-11. 📈 Monitoring setup (#16-18)
+7. 🏈 Player analytics (#11)
+8. 🔐 Security hardening
+9. 📈 Monitoring setup
 
-### Long Term (6+ Months)
+### Long Term (6+ Months) - v2.0.0
 
-12. 📊 DBT semantic layer (#19)
-13. 🌐 Multi-league support (#23)
-14. 🤖 ML predictions (#25)
+10. � Documentation consolidation (23 files → 3)
+11. 🌐 ESPN/Yahoo league import
+12. 📊 DBT semantic layer
+13. 🤖 ML predictions
 
 ---
 
 ## 📊 Impact vs. Effort Matrix
 
 ### Quick Wins (High Impact, Low Effort)
+
+- 🌍 **Universal League Config (#1)** - 4-6 hours - **DO THIS FIRST!**
+- 📧 Email/Slack notifications (#10) - 30 min (already coded!)
+- 📊 Strength of schedule (#6) - 2 hours
 
 - 📧 Email/Slack notifications (#12) - 30 min
 - 🟡 Fix hardcoded year (#4) - 15 min
@@ -360,16 +387,29 @@
 - **One thing at a time** - Master each concept before moving on
 - **Wait to refactor docs** - Let features stabilize before v2.0.0 doc consolidation
 
-**🔥 PRIORITY FEATURES** for v1.1.0+:
+**🔥 PRIORITY FEATURES** for v1.1.0:
 
-- **Injury Impact Analysis** - Quantify how unlucky each team has been with injuries
-- **Draft Performance Analysis** - Compare draft picks to current player rankings, roast bad picks!
+1. **Universal League Configuration** - Make Morgan Bowl work for ANY Sleeper league
+2. **Strength of Schedule** - Easy analytics win, useful insights
+3. **Injury Impact Analysis** - Quantify how unlucky each team has been with injuries
+4. **Draft Performance Analysis** - Compare draft picks to current player rankings, roast bad picks!
+
+**⏸️ DEFERRED FEATURES**:
+
+- **Playoff Probability Simulator** - Postponed to v1.2.0 or later
+  - Reason: Complex implementation, less immediate value than league portability
+  - Focus: Build foundation for universal league support first
 
 **📚 DOCUMENTATION STRATEGY**:
 
 - **v1.x releases**: Keep adding to existing docs as needed (don't worry about duplication)
 - **v2.0.0**: Major documentation consolidation (23 files → 3 essential docs)
 - **Rationale**: Avoid redoing documentation work as features evolve
+
+**🌐 LONG-TERM VISION**:
+
+- **v2.0.0**: ESPN & Yahoo league import (unified fantasy platform analytics)
+- **Platform-agnostic**: Work with any fantasy football league, any platform
 
 **Release Strategy**:
 
