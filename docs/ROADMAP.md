@@ -1,44 +1,20 @@
 # Morgan Bowl Feature Roadmap
 
-## 🎯 Version 1.0.1 - Critical Fixes (NEXT RELEASE)
+## ✅ Version 1.0.1 - Critical Fixes (RELEASED 2025-10-19)
 
-### 🔴 Critical Priority (Must Fix Before Sharing Widely)
+**All items completed! See [RELEASE_1.0.1.md](releases/RELEASE_1.0.1.md) for details.**
 
-1. **Add Error Handling to Dashboard** ([`analytics/dashboard.py`](../analytics/dashboard.py))
-   - Current Issue: Dashboard crashes when database queries fail
-   - Fix: Add try-except blocks, show user-friendly error messages
-   - Impact: Prevents embarrassing crashes when league mates use it
-   - Effort: 1 hour
+- ✅ Add Error Handling to Dashboard
+- ✅ Fix SQL Injection Vulnerability in Report Generator
+- ✅ Parameterize Hardcoded League Size
+- ✅ Fix Hardcoded Season Year
+- ✅ Configure Pre-commit Hooks (Black, isort, Ruff, SQLFluff)
 
-2. **Fix SQL Injection Vulnerability in Report Generator** ([`scripts/generate_report.py`](../scripts/generate_report.py))
-   - Current Issue: Uses f-strings for SQL queries (security risk)
-   - Fix: Use parameterized queries
-   - Impact: Security vulnerability
-   - Effort: 30 minutes
-
-### 🟡 High Priority (Should Fix Soon)
-
-3. **Parameterize Hardcoded League Size** ([`dbt/models/marts/fct_justice_record.sql`](../dbt/models/marts/fct_justice_record.sql))
-   - Current Issue: League size hardcoded as `6` in justice record calculation
-   - Fix: Move to `dbt_project.yml` config variable
-   - Impact: Makes code reusable for different league sizes
-   - Effort: 2 hours
-
-4. **Fix Hardcoded Season Year** ([`src/ingestion/pipeline.py`](../src/ingestion/pipeline.py))
-   - Current Issue: Year defaults to `2025`, doesn't auto-detect
-   - Fix: Extract year from Sleeper API response
-   - Impact: Prevents manual updates every season
-   - Effort: 15 minutes
-
-5. **Fix Markdown Linting Issues** (260 warnings across docs)
-   - Current Issue: Inconsistent markdown formatting
-   - Fix: Run `markdownlint-cli2` and clean up warnings
-   - Impact: Professional documentation appearance
-   - Effort: 30 minutes
+**Note:** Markdown linting warnings (260+) are cosmetic and will be addressed in v2.0.0 documentation refactor.
 
 ---
 
-## 🚀 Version 1.1.0 - Advanced Analytics (Q4 2024)
+## 🚀 Version 1.1.0 - Advanced Analytics (NEXT RELEASE)
 
 ### Player Analytics & Insights
 
@@ -184,6 +160,53 @@
 
 ## 📈 Version 2.0.0 - Platform Expansion (Q2 2025)
 
+### 📚 Documentation Consolidation
+
+**MAJOR CLEANUP:** Consolidate 23 markdown files → 3 essential docs
+
+**Rationale:** Wait until v2.0.0 to avoid redoing work as features are added in v1.x releases.
+
+**Target Structure:**
+
+1. **`README.md`** (root) - User-facing quick start
+   - What is Morgan Bowl?
+   - 5-minute setup guide
+   - How to use the dashboard
+   - Feature highlights (Justice Record, Injury Analysis, Draft Analysis, etc.)
+   - Screenshots and examples
+
+2. **`DEVELOPMENT.md`** (root) - Developer/contributor documentation
+   - Architecture overview & tech stack
+   - Detailed development setup
+   - DBT guide and model documentation
+   - Testing strategy
+   - CI/CD pipeline explanation
+   - Release process
+   - Roadmap (current + future)
+
+3. **`CHANGELOG.md`** (root) - Version history
+   - Keep standard changelog format
+   - Include release notes inline (not separate files)
+   - Links to detailed feature specs if needed
+
+**Archive to `docs/archive/`:**
+
+- Old release notes (RELEASE_1.0.0.md, RELEASE_1.0.1.md, etc.)
+- Draft feature specs (FEATURE_SPEC_*.md)
+- Learning logs (nice reference material)
+- Old reviews (CODE_REVIEW.md, TECH_REVIEW_*.md)
+
+**Delete:**
+
+- Duplicate/outdated setup guides
+- Internal planning docs (.organization-summary.md, NEXT_STEPS.md)
+
+**Impact:** Clean, professional first impression. New contributors/users find what they need immediately.
+
+**Effort:** 4-6 hours (careful merging of content, updating references)
+
+---
+
 ### Data Quality & Consistency
 
 17. **DBT Semantic Layer**
@@ -325,9 +348,9 @@
 ## 📝 Notes
 
 **Last Updated**: October 19, 2025
-**Current Version**: 1.0.0
-**Next Release**: 1.0.1 (Critical Fixes)
-**Target for 2.0.0**: ~2 weeks (after 1.0.1 is solid)
+**Current Version**: 1.0.1 ✅
+**Next Release**: 1.1.0 (Advanced Analytics)
+**Target for 2.0.0**: Q2 2025 (after feature set matures)
 
 **Development Philosophy**:
 
@@ -335,16 +358,23 @@
 - **Test-driven** - Write tests for all fixes and features
 - **Document everything** - Before/after examples, learning notes
 - **One thing at a time** - Master each concept before moving on
+- **Wait to refactor docs** - Let features stabilize before v2.0.0 doc consolidation
 
-**🔥 NEW FEATURES ADDED** (Planned for 2.0.0):
+**🔥 PRIORITY FEATURES** for v1.1.0+:
 
 - **Injury Impact Analysis** - Quantify how unlucky each team has been with injuries
-- **Draft Performance Analysis** - Compare draft picks to current player rankings
+- **Draft Performance Analysis** - Compare draft picks to current player rankings, roast bad picks!
+
+**📚 DOCUMENTATION STRATEGY**:
+
+- **v1.x releases**: Keep adding to existing docs as needed (don't worry about duplication)
+- **v2.0.0**: Major documentation consolidation (23 files → 3 essential docs)
+- **Rationale**: Avoid redoing documentation work as features evolve
 
 **Release Strategy**:
 
-- **v1.0.1** (This week): Critical fixes, learn defensive programming
-- **v1.1.0** (Week 2-3): Quick wins (notifications, strength of schedule)
-- **v2.0.0** (~2 weeks): New features (injury + draft analysis)
+- ✅ **v1.0.1** (Oct 19, 2025): Critical security & quality fixes - SHIPPED!
+- 🎯 **v1.1.0** (Next): Advanced analytics (injury impact, draft analysis, playoff simulator)
+- 📈 **v2.0.0** (Q2 2025): Documentation consolidation + platform expansion features
 
 **Quick Win Alert**: Feature #12 (Email/Slack notifications) is already coded! Just needs environment variables set up. This is the highest ROI feature available right now.
