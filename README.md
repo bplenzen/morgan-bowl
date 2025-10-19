@@ -64,6 +64,86 @@ poetry run dbt run
 poetry run dbt test
 ```
 
+## 🌍 Use With ANY Sleeper League
+
+**Morgan Bowl v1.1.0+ works with any Sleeper fantasy football league!** Just provide your league ID and the system auto-detects all settings.
+
+### How To Use Your League
+
+1. **Find Your Sleeper League ID**
+   - Open the Sleeper app or website
+   - Navigate to your league
+   - Look at the URL: `https://sleeper.com/leagues/YOUR_LEAGUE_ID_HERE`
+   - Copy the long number (e.g., `1260408876017143808`)
+
+2. **Configure Your Environment**
+
+   ```bash
+   # Edit .env file
+   SLEEPER_LEAGUE_ID=YOUR_LEAGUE_ID_HERE
+   SLEEPER_SEASON=2025
+   DUCKDB_PATH=data/warehouse.duckdb
+   ```
+
+3. **Run Ingestion - Settings Auto-Detected!**
+
+   ```bash
+   poetry run python -m ingestion.cli
+   ```
+
+   The system automatically detects:
+   - ✅ Total teams in your league
+   - ✅ Number of playoff teams
+   - ✅ Playoff week start
+   - ✅ Scoring settings (PPR, Half-PPR, Standard)
+   - ✅ Roster positions
+
+4. **Build Analytics**
+
+   ```bash
+   cd dbt
+   poetry run dbt build
+   ```
+
+   All models adapt to your league configuration automatically!
+
+### What's Configurable
+
+**Auto-Detected** (no configuration needed):
+
+- League size (8, 10, 12, 14+ teams)
+- Playoff structure (4, 6, 8 teams make playoffs)
+- Scoring system (read from your league settings)
+- Season year (from Sleeper API)
+
+**Manual Configuration** (optional, in `dbt/dbt_project.yml`):
+
+```yaml
+vars:
+  league_size: 12      # Override if needed (defaults to actual roster count)
+  playoff_teams: 6     # Override if needed (defaults to league settings)
+```
+
+**Note:** DBT variables now fall back to auto-detected values from the league table, so you typically don't need to change them!
+
+### Supported League Formats
+
+- ✅ Standard leagues (12 teams, 6 playoff spots)
+- ✅ Small leagues (8-10 teams)
+- ✅ Large leagues (14+ teams)
+- ✅ Custom playoff structures (4, 6, 8 playoff teams)
+- ✅ PPR, Half-PPR, Standard scoring
+- ⏳ Dynasty leagues (coming in v2.0)
+- ⏳ Best Ball leagues (coming in v2.0)
+
+### Future: ESPN & Yahoo Support
+
+**Coming in v2.0.0:**
+
+- Import leagues from ESPN Fantasy
+- Import leagues from Yahoo Fantasy
+- Unified analytics across all platforms!
+
 ## 📁 Project Structure
 
 ```

@@ -1,7 +1,16 @@
 {{ config(materialized='table') }}
 
+-- Get league configuration (playoff teams) from ingested data
+-- Falls back to var if not available
+with league_config as (
+    select
+        coalesce(playoff_teams, {{ var('playoff_teams', 6) }}) as playoff_teams
+    from {{ ref('stg_league') }}
+    limit 1
+),
+
 -- Rank teams by points each week (1 = highest scorer, 12 = lowest scorer)
-with weekly_ranks as (
+weekly_ranks as (
     select
         m.week,
         m.roster_id,
@@ -18,22 +27,23 @@ with weekly_ranks as (
 ),
 
 -- Determine if each team was in top half (justice win) or bottom half (justice loss)
--- Using configurable playoff_teams variable (default: 6 for 12-team league)
+-- Using playoff_teams from league configuration (auto-detected from Sleeper API)
 weekly_justice_wins as (
     select
-        week,
-        roster_id,
-        owner_id,
-        manager_name,
-        points,
-        points_rank,
+        wr.week,
+        wr.roster_id,
+        wr.owner_id,
+        wr.manager_name,
+        wr.points,
+        wr.points_rank,
         -- Justice win if you're in the top playoff_teams scorers that week
+        wr.actual_win,
         case
-            when points_rank <= {{ var('playoff_teams', 6) }} then 1
+            when wr.points_rank <= lc.playoff_teams then 1
             else 0
-        end as justice_win,
-        actual_win
-    from weekly_ranks
+        end as justice_win
+    from weekly_ranks as wr
+    cross join league_config as lc
 ),
 
 -- Aggregate to season totals
