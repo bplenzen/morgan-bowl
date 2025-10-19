@@ -130,13 +130,11 @@ None identified in this release.
 
 ## Next Steps
 
-See `docs/ROADMAP.md` for planned features in version 1.1.0 and beyond.
+For comprehensive next steps and future development plans, see:
 
-### Recommended Next Actions
+📚 **[`docs/releases/NEXT_STEPS.md`](NEXT_STEPS.md)** - Complete guide to what to do next
 
-1. **End-to-End Testing** - Validate full pipeline: ingestion → DBT → dashboard → report
-2. **Documentation** - Add inline docstrings to key functions
-3. **Monitoring** - Add structured logging for better observability
+Also see [`docs/ROADMAP.md`](../ROADMAP.md) for planned features in version 1.2.0 and beyond.
 
 ## Contributors
 

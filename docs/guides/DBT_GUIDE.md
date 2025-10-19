@@ -109,24 +109,15 @@ poetry run dbt test
 
 ## 💡 Next Steps
 
-1. **Add more analytics:**
-   - Head-to-head records
-   - Weekly power rankings
-   - Playoff probability
-   - Best/worst weeks
+For comprehensive next steps and future development plans, see:
 
-2. **Add data quality tests:**
-   - Ensure 2 teams per matchup
-   - Points are non-negative
-   - No missing weeks
+📚 **[`docs/releases/NEXT_STEPS.md`](../releases/NEXT_STEPS.md)** - Complete guide to what to do next
 
-3. **Create exposures:**
-   - Dashboard definitions
-   - Report specifications
-
-4. **Automate:**
-   - Schedule weekly ingestion + DBT runs
-   - Alert on data quality failures
+Quick DBT improvements:
+1. **Add more analytics** - Head-to-head records, power rankings, playoff probability
+2. **Add data quality tests** - More custom tests beyond the basics
+3. **Create exposures** - Dashboard and report specifications
+4. **Automate** - Schedule weekly ingestion + DBT runs
 
 ---
 

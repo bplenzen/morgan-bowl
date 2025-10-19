@@ -399,6 +399,7 @@ Morgan Bowl is a personal sandbox for end-to-end DataOps practice using Sleeper 
 ## Planned Repository Layout
 
 ```
+```
 morgan-bowl/
 ├── src/ingestion/           # Sleeper API clients, CLI, utilities
 ├── dbt/                     # dbt project (models, macros, tests)
@@ -411,6 +412,13 @@ morgan-bowl/
 ├── data/processed/          # Parquet/DuckDB artifacts (gitignored)
 ├── tests/                   # Pytest suites for ingestion/utilities
 └── Makefile
+```
+
+---
+
+**📚 For detailed next steps and future development plans, see [`docs/releases/NEXT_STEPS.md`](docs/releases/NEXT_STEPS.md)**
+
+````
 ```
 
 ## Next Actions

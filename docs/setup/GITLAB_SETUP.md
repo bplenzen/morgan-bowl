@@ -188,12 +188,21 @@ Every **Tuesday at 6:00 AM**:
 - Update the schedule's timezone setting
 - GitLab uses UTC by default
 
+---
+
 ## 📚 Next Steps
 
+For comprehensive next steps and future development plans, see:
+
+📚 **[`docs/releases/NEXT_STEPS.md`](../releases/NEXT_STEPS.md)** - Complete guide to what to do next
+
+Quick recommendations:
 - **Monitor runs**: Check **Build → Pipelines** each Tuesday
-- **Add notifications**: Set up Slack/email alerts
-- **Expand pipeline**: Add data quality checks, visualizations, etc.
+- **Add notifications**: Set up Slack/email alerts (see consolidated guide)
+- **Expand pipeline**: Add data quality checks, visualizations (see roadmap)
 - **Learn more**: [GitLab CI/CD docs](https://docs.gitlab.com/ee/ci/)
+
+---
 
 ## 🎓 What You're Learning (Enterprise Skills)
 

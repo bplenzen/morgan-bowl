@@ -330,20 +330,11 @@ Already implemented in `scripts/generate_report.py`!
 
 ## 📅 Next Steps
 
-1. **Immediate** (Today):
-   - [ ] Deploy Streamlit dashboard to cloud
-   - [ ] Share link with league
-   - [ ] Run `poetry run black .` and `poetry run isort .` for code formatting
+For comprehensive next steps and future development plans, see:
 
-2. **This Week**:
-   - [ ] Watch next scheduled pipeline run (Tuesday 6 AM)
-   - [ ] Verify week 7 data ingests correctly
-   - [ ] Get feedback from league mates on dashboard
+📚 **[`docs/releases/NEXT_STEPS.md`](NEXT_STEPS.md)** - Complete guide to what to do next
 
-3. **Next Month** (1.1.0):
-   - [ ] Add playoff probability simulator
-   - [ ] Enable weekly email/Slack reports
-   - [ ] Add strength of schedule analysis
+Also see [`docs/ROADMAP.md`](../ROADMAP.md) for feature roadmap.
 
 ---
 

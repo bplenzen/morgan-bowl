@@ -73,12 +73,14 @@ Old/duplicate files archived in: archive/old-ingestion-20241014/
 
 ## Next Steps
 
-Once you have data ingested:
+For comprehensive next steps and future development plans, see:
 
-1. **DBT Models**: Transform raw data into analytics-ready tables
-2. **Observability**: Add metrics and monitoring
-3. **Orchestration**: Schedule automated runs
-4. **Analytics**: Build dashboards/reports
+📚 **[`docs/releases/NEXT_STEPS.md`](../releases/NEXT_STEPS.md)** - Complete guide to what to do next
+
+Quick links:
+- **Setup automation**: [`docs/setup/QUICK_START.md`](QUICK_START.md)
+- **DBT development**: [`docs/guides/DBT_GUIDE.md`](../guides/DBT_GUIDE.md)
+- **Feature roadmap**: [`docs/ROADMAP.md`](../ROADMAP.md)
 
 ## Troubleshooting
 

@@ -130,9 +130,13 @@ Reasoning:
 
 ## Next Steps
 
-1. Review feature specs
+For comprehensive next steps and implementation plans, see:
+
+📚 **[`docs/releases/NEXT_STEPS.md`](releases/NEXT_STEPS.md)** - Complete guide including v1.2.0 feature development
+
+Quick summary:
+1. Review feature specs (injury analysis, draft analysis)
 2. Confirm Sleeper API has necessary data
-3. Start with critical fixes (#1-2)
-4. Then implement injury analysis (#8)
-5. Then implement draft analysis (#9)
-6. Profit from league mates' amazement! 🏆
+3. Follow v1.2.0 roadmap in NEXT_STEPS.md
+4. Start with injury impact analysis (highest priority)
+5. Profit from league mates' amazement! 🏆

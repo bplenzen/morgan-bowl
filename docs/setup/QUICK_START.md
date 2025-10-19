@@ -93,19 +93,35 @@ Watch it run! You should see:
 
 Your pipeline is now scheduled to run **every Tuesday at 6:00 AM**.
 
-### What Happens Next Week (Oct 21)?
+### What Happens Next Week?
 
 On Tuesday morning:
 
 1. GitLab wakes up at 6 AM
 2. Runs `weekly_ingestion.py`
-3. Script sees week 7 is complete
-4. Ingests week 7 data
+3. Script detects current week
+4. Ingests new week data
 5. Updates DBT models
 6. Runs all tests
 7. Stores updated database
 
 You don't have to do anything! ✨
+
+---
+
+## 📚 What's Next?
+
+For comprehensive next steps and future development plans, see:
+
+📚 **[`docs/releases/NEXT_STEPS.md`](../releases/NEXT_STEPS.md)** - Complete guide to what to do next
+
+This includes:
+- Adding advanced analytics (injury analysis, draft performance)
+- Deploying dashboards
+- Setting up notifications
+- And much more!
+
+---
 
 ## 🐛 Troubleshooting
 
