@@ -189,9 +189,15 @@ final as (
     left join
         expected_wins_calc as ew
         on ar.roster_id = ew.roster_id and ar.manager_name = ew.manager_name
-    left join schedule_luck as sl using (roster_id, manager_name)
-    left join close_games as cg using (roster_id, manager_name)
-    left join consistency as c using (roster_id, manager_name)
+    left join
+        schedule_luck as sl
+        on ar.roster_id = sl.roster_id and ar.manager_name = sl.manager_name
+    left join
+        close_games as cg
+        on ar.roster_id = cg.roster_id and ar.manager_name = cg.manager_name
+    left join
+        consistency as c
+        on ar.roster_id = c.roster_id and ar.manager_name = c.manager_name
 )
 
 select
@@ -226,18 +232,18 @@ select
 
     -- OVERALL LUCK RATING (0-100 scale, 50 = average)
     case
-        when schedule_luck_index > 5 then 'Brutal Schedule ðŸ˜°'
-        when schedule_luck_index > 2 then 'Tough Schedule ðŸ˜“'
-        when schedule_luck_index > -2 then 'Average Schedule âš–ï¸\x8f'
-        when schedule_luck_index > -5 then 'Easy Schedule ðŸ˜Š'
-        else 'Cupcake Schedule ðŸ§\x81'
+        when schedule_luck_index > 5 then 'Brutal Schedule'
+        when schedule_luck_index > 2 then 'Tough Schedule'
+        when schedule_luck_index > -2 then 'Average Schedule'
+        when schedule_luck_index > -5 then 'Easy Schedule'
+        else 'Cupcake Schedule'
     end as schedule_difficulty,
     case
-        when composite_luck_score >= 65 then 'ðŸ\x8d€ðŸ\x8d€ðŸ\x8d€ VERY LUCKY'
-        when composite_luck_score >= 55 then 'ðŸ\x8d€ Lucky'
-        when composite_luck_score >= 45 then 'âš–ï¸\x8f Fair'
-        when composite_luck_score >= 35 then 'ðŸ˜ž Unlucky'
-        else 'ðŸ˜­ðŸ˜­ðŸ˜­ VERY UNLUCKY'
+        when composite_luck_score >= 65 then 'VERY LUCKY'
+        when composite_luck_score >= 55 then 'Lucky'
+        when composite_luck_score >= 45 then 'Fair'
+        when composite_luck_score >= 35 then 'Unlucky'
+        else 'VERY UNLUCKY'
     end as luck_rating
 
 from final

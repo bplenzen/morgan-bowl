@@ -49,10 +49,10 @@ models:
         tests:
           - not_null
       - name: luck_status
-        description: "Human-readable luck interpretation with emojis"
+        description: "Human-readable luck interpretation"
         tests:
           - accepted_values:
-              values: ['VERY LUCKY 🍀🍀', 'Lucky 🍀', 'Fair ⚖️', 'Unlucky 😞', 'VERY UNLUCKY 😭😭']
+              values: ['VERY LUCKY', 'Lucky', 'Fair', 'Unlucky', 'VERY UNLUCKY']
 
   - name: fct_advanced_luck
     description: "Advanced luck analysis using multiple statistical approaches: all-play record, expected wins, schedule strength, close game performance, and composite luck score."

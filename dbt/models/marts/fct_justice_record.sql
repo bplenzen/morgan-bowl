@@ -76,11 +76,11 @@ select
 
     -- Luck interpretation
     case
-        when actual_wins - justice_wins > 1 then 'VERY LUCKY ðŸ\x8d€ðŸ\x8d€'
-        when actual_wins - justice_wins = 1 then 'Lucky ðŸ\x8d€'
-        when actual_wins - justice_wins = 0 then 'Fair âš–ï¸\x8f'
-        when actual_wins - justice_wins = -1 then 'Unlucky ðŸ˜\x9e'
-        when actual_wins - justice_wins < -1 then 'VERY UNLUCKY ðŸ˜­ðŸ˜­'
+        when actual_wins - justice_wins > 1 then 'VERY LUCKY'
+        when actual_wins - justice_wins = 1 then 'Lucky'
+        when actual_wins - justice_wins = 0 then 'Fair'
+        when actual_wins - justice_wins = -1 then 'Unlucky'
+        when actual_wins - justice_wins < -1 then 'VERY UNLUCKY'
     end as luck_status,
 
     -- Supporting stats

@@ -2,7 +2,7 @@ version: 2
 
 models:
   - name: stg_league
-    description: "League metadata with standardized field names."
+    description: "League metadata with standardized field names and configuration settings."
     columns:
       - name: league_id
         tests:
@@ -10,6 +10,20 @@ models:
           - unique
       - name: name
         description: "League display name from Sleeper."
+      - name: season
+        description: "Season year (e.g., '2025')."
+      - name: total_rosters
+        description: "Total number of teams in the league."
+        tests:
+          - not_null
+      - name: playoff_teams
+        description: "Number of teams that make the playoffs."
+        tests:
+          - not_null
+      - name: playoff_week_start
+        description: "Week number when playoffs begin."
+      - name: status
+        description: "League status: 'pre_draft', 'drafting', 'in_season', or 'complete'."
   - name: stg_users
     description: "Normalized view of Sleeper users for the league."
     columns:
