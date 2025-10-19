@@ -73,7 +73,11 @@ def load_standings():
 
 @st.cache_data
 def load_justice_record():
-    """Load justice record (luck analysis)"""
+    """Load justice record (luck analysis)
+
+    DEPRECATED: This function is kept for backward compatibility
+    but is no longer used in the dashboard UI (replaced by load_advanced_luck)
+    """
     try:
         conn = get_db_connection()
         return conn.execute(
@@ -121,7 +125,7 @@ def load_weekly_performance():
 
 @st.cache_data
 def load_advanced_luck():
-    """Load advanced luck metrics (the nerd shit)"""
+    """Load advanced luck metrics (all-play record, expected wins, schedule strength)"""
     try:
         conn = get_db_connection()
         return conn.execute(
@@ -169,8 +173,7 @@ with st.sidebar:
         "Choose a view:",
         [
             "📊 Standings",
-            "🍀 Justice Rankings",
-            "🤓 Nerd Shit",
+            "🤓 Luck Analysis",
             "📈 Weekly Performance",
             "🔥 Power Rankings",
         ],
@@ -182,8 +185,9 @@ with st.sidebar:
         """
     This dashboard analyzes your fantasy football league using:
     - **Actual Record**: Head-to-head wins/losses
-    - **Justice Rankings**: Simple top-6/bottom-6 approach
-    - **Nerd Shit**: Advanced statistical luck analysis
+    - **Luck Analysis**: Advanced statistical metrics (all-play record, expected wins, schedule strength)
+    - **Weekly Performance**: Scoring trends over time
+    - **Power Rankings**: Combined performance metrics
     """
     )
 
@@ -245,114 +249,13 @@ if page == "📊 Standings":
     )
     st.plotly_chart(fig, use_container_width=True)
 
-elif page == "🍀 Justice Rankings":
-    st.header("Justice Rankings - Who's Lucky? Who's Unlucky?")
+elif page == "🤓 Luck Analysis":
+    st.header("🤓 Advanced Luck Analytics")
 
-    st.markdown(
-        """
-    Each week, the top 6 scorers get a win and the bottom 6 get a loss. Your justice record is what
-    your record would be based purely on scoring. Compare it to your actual record to see if you've been lucky or unlucky.
-
-    *For more detailed stats, check out "🤓 Nerd Shit".*
-    """
-    )
-
-    justice_df = load_justice_record()
-
-    # Luck metrics
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        luckiest = justice_df.nlargest(1, "luck_differential").iloc[0]
-        st.metric(
-            "Luckiest Team",
-            luckiest["manager_name"],
-            f"+{luckiest['luck_differential']}",
-        )
-    with col2:
-        unluckiest = justice_df.nsmallest(1, "luck_differential").iloc[0]
-        st.metric(
-            "Unluckiest Team",
-            unluckiest["manager_name"],
-            f"{unluckiest['luck_differential']}",
-        )
-    with col3:
-        fair_teams = len(justice_df[justice_df["luck_differential"] == 0])
-        st.metric("Fair Teams", fair_teams, "⚖️")
-
-    # Justice record table
-    st.subheader("Justice Record Breakdown")
-    justice_df["actual_record"] = (
-        justice_df["actual_wins"].astype(int).astype(str)
-        + "-"
-        + justice_df["actual_losses"].astype(int).astype(str)
-    )
-    justice_df["justice_record"] = (
-        justice_df["justice_wins"].astype(int).astype(str)
-        + "-"
-        + justice_df["justice_losses"].astype(int).astype(str)
-    )
-
-    st.dataframe(
-        justice_df[
-            [
-                "manager_name",
-                "actual_record",
-                "justice_record",
-                "luck_differential",
-                "luck_status",
-                "avg_points_per_week",
-            ]
-        ],
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "manager_name": "Manager",
-            "actual_record": "Actual Record",
-            "justice_record": "Justice Record",
-            "luck_differential": st.column_config.NumberColumn(
-                "Luck +/-", help="Positive = lucky, Negative = unlucky"
-            ),
-            "luck_status": "Status",
-            "avg_points_per_week": st.column_config.NumberColumn(
-                "Avg Pts/Week", format="%.2f"
-            ),
-        },
-    )
-
-    # Luck visualization
-    fig = go.Figure()
-
-    colors = [
-        "red" if x < 0 else "green" if x > 0 else "gray"
-        for x in justice_df["luck_differential"]
-    ]
-
-    fig.add_trace(
-        go.Bar(
-            x=justice_df["manager_name"],
-            y=justice_df["luck_differential"],
-            marker_color=colors,
-            text=justice_df["luck_differential"],
-            textposition="outside",
-            name="Luck Differential",
-        )
-    )
-
-    fig.update_layout(
-        title="Luck Differential (Actual Wins - Justice Wins)",
-        xaxis_title="Manager",
-        yaxis_title="Luck +/-",
-        yaxis_zeroline=True,
-        yaxis_zerolinewidth=2,
-        yaxis_zerolinecolor="black",
-        showlegend=False,
-        height=500,
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
-elif page == "🤓 Nerd Shit":
-    st.header("🤓 Advanced Luck Analytics (Nerd Shit)")
+    # NOTE: This page replaces the old "Justice Rankings" feature (deprecated Oct 2025)
+    # Old approach: Simple top-6/bottom-6 median split
+    # New approach: All-play record, expected wins, schedule strength, close games
+    # The old fct_justice_record model still exists but is not used in the dashboard
 
     st.markdown(
         """

@@ -1,5 +1,14 @@
 {{ config(materialized='table') }}
 
+-- ⚠️ DEPRECATED: This model is kept for backward compatibility but is no longer used in the dashboard
+-- Replaced by fct_advanced_luck.sql (Oct 2025)
+--
+-- Reason for deprecation: Simple median-based approach (top 6 = win) is less sophisticated
+-- than all-play record and expected wins methodology in fct_advanced_luck
+--
+-- This model still runs to avoid breaking CI/CD and existing tests
+-- Consider removing in v2.0.0 after confirming no downstream dependencies
+
 -- Get league configuration (playoff teams) from ingested data
 -- Falls back to var if not available
 with league_config as (

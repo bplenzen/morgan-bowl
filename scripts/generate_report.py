@@ -52,6 +52,9 @@ def generate_weekly_report(week: int) -> str:
     ).df()
 
     # Get justice record updates
+    # NOTE: Justice record is deprecated in favor of advanced luck metrics
+    # This report still uses it for backward compatibility
+    # Consider updating to use fct_advanced_luck in future versions
     justice = conn.execute(
         """
         SELECT

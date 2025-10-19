@@ -30,7 +30,11 @@ models:
         description: "Wins divided by games played."
 
   - name: fct_justice_record
-    description: "Justice record (median wins) vs actual record to measure luck. Teams scoring above the weekly median earn 'justice wins'. Luck differential shows how lucky/unlucky each team has been."
+    description: "⚠️ DEPRECATED (Oct 2025): Replaced by fct_advanced_luck. Justice record (median wins) vs actual record to measure luck. Teams scoring above the weekly median earn 'justice wins'. Kept for backward compatibility."
+    meta:
+      deprecated: true
+      deprecated_date: "2025-10-19"
+      replaced_by: "fct_advanced_luck"
     columns:
       - name: roster_id
         tests:
