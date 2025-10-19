@@ -5,6 +5,7 @@ Comprehensive testing to ensure your data is correct at every stage.
 ## 🎯 Testing Philosophy
 
 **3-Layer Defense:**
+
 1. **Source Truth Tests** - Validate against Sleeper API directly
 2. **Ingestion Tests** - Ensure data loaded correctly into DuckDB
 3. **Transformation Tests** - DBT tests on models
@@ -14,12 +15,14 @@ Comprehensive testing to ensure your data is correct at every stage.
 ### ✅ What You Already Have
 
 **DBT Tests** (17 total):
+
 - Not null checks on key fields
 - Uniqueness constraints
 - Custom business logic (2 rosters per matchup)
 - Referential integrity
 
 **Python Tests** (23 total):
+
 - Unit tests for ingestion logic
 - SQL injection protection
 - Error handling
@@ -28,6 +31,7 @@ Comprehensive testing to ensure your data is correct at every stage.
 ### ⚠️ What's Missing
 
 **Source of Truth Validation:**
+
 - Compare ingested data vs live API
 - Validate point totals match
 - Check for data drift over time
@@ -53,6 +57,7 @@ tests/
 ### Level 1: Critical (Must Have)
 
 **Test 1: API Parity Check**
+
 ```python
 # Compare week's points in DB vs Sleeper API
 def test_week_points_match_api(week):
@@ -63,6 +68,7 @@ def test_week_points_match_api(week):
 ```
 
 **Test 2: Completeness Check**
+
 ```python
 def test_all_rosters_have_data(week):
     """Verify all 12 rosters have matchup data for the week"""
@@ -71,6 +77,7 @@ def test_all_rosters_have_data(week):
 ```
 
 **Test 3: Point Total Validation**
+
 ```python
 def test_matchup_points_are_reasonable(week):
     """Flag if points are suspiciously high/low"""
@@ -82,6 +89,7 @@ def test_matchup_points_are_reasonable(week):
 ### Level 2: Important (Should Have)
 
 **Test 4: Historical Consistency**
+
 ```python
 def test_historical_data_unchanged(week):
     """Ensure past weeks' data doesn't change"""
@@ -90,6 +98,7 @@ def test_historical_data_unchanged(week):
 ```
 
 **Test 5: Standings Math**
+
 ```python
 def test_standings_calculations():
     """Verify wins/losses add up correctly"""
@@ -101,6 +110,7 @@ def test_standings_calculations():
 ### Level 3: Nice to Have
 
 **Test 6: Data Freshness**
+
 ```python
 def test_data_is_current():
     """Alert if data is stale"""
@@ -113,15 +123,18 @@ def test_data_is_current():
 I can create these tests in phases:
 
 ### Phase 1: API Validation Tests (30 min)
+
 - Create `tests/integration/test_api_parity.py`
 - Test that compares DB vs live API for a given week
 - Run as part of CI/CD pipeline
 
 ### Phase 2: Completeness Tests (20 min)
+
 - Add tests for roster count, week presence
 - Validate no missing data
 
 ### Phase 3: DBT Great Expectations (Advanced)
+
 - Use DBT packages for statistical tests
 - Validate distributions, ranges, patterns
 
@@ -137,21 +150,21 @@ def test_week_6_points_match_sleeper_api():
     """
     import httpx
     import duckdb
-    
+
     # Fetch from Sleeper API (source of truth)
     response = httpx.get(
         f"https://api.sleeper.app/v1/league/{LEAGUE_ID}/matchups/6"
     )
     api_data = {m['roster_id']: m['points'] for m in response.json()}
-    
+
     # Fetch from our database
     conn = duckdb.connect('data/warehouse.duckdb')
     db_data = conn.execute("""
-        SELECT roster_id, points 
+        SELECT roster_id, points
         FROM staging.matchups_week_06
     """).fetchall()
     db_dict = {roster_id: points for roster_id, points in db_data}
-    
+
     # Compare
     for roster_id in api_data:
         assert roster_id in db_dict, f"Missing roster {roster_id}"
@@ -196,15 +209,18 @@ test:api_parity:
 ## 📊 Test Reporting
 
 **Option 1: Pytest Reports** (what you have now)
+
 - Simple pass/fail
 - JUnit XML for GitLab
 
 **Option 2: Great Expectations** (Advanced)
+
 - Statistical data validation
 - Data profiling
 - Nice HTML reports
 
 **Option 3: DBT Tests + Docs** (what you have)
+
 - Test results in `dbt/target/`
 - Documentation site
 
@@ -213,17 +229,20 @@ test:api_parity:
 I can build:
 
 **A) Quick Win (30 min)**
+
 - API parity tests for weeks 1-6
 - Completeness checks
 - Add to your existing pytest suite
 
 **B) Comprehensive (1-2 hours)**
+
 - All critical + important tests
 - DBT Great Expectations integration
 - Full CI/CD integration
 - Test documentation
 
 **C) Just the Plan (now)**
+
 - This document
 - You implement as needed
 

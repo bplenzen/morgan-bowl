@@ -1,0 +1,77 @@
+# Pre-commit hooks for Morgan Bowl
+# Install: poetry run pre-commit install
+# Run manually: poetry run pre-commit run --all-files
+
+repos:
+  # Python code formatting (auto-fixes)
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        name: Format Python code with Black
+        language_version: python3.11
+
+  # Import sorting (auto-fixes)
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        name: Sort Python imports
+        args: ["--profile", "black"]
+
+  # Python linting (finds issues)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        name: Lint Python code with Ruff
+        args: [--fix, --exit-non-zero-on-fix]
+
+  # General file cleanup
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        name: Remove trailing whitespace
+      - id: end-of-file-fixer
+        name: Ensure files end with newline
+      - id: check-yaml
+        name: Validate YAML files
+      - id: check-added-large-files
+        name: Prevent large files (>500KB)
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+        name: Check for merge conflict markers
+      - id: detect-private-key
+        name: Detect private keys
+
+  # SQL formatting (for DBT models)
+  - repo: https://github.com/sqlfluff/sqlfluff
+    rev: 3.2.5
+    hooks:
+      - id: sqlfluff-lint
+        name: Lint SQL files
+        files: ^dbt/models/.*\.sql$
+        additional_dependencies: ['dbt-duckdb', 'sqlfluff-templater-dbt']
+        args: [--dialect, duckdb]
+      - id: sqlfluff-fix
+        name: Fix SQL formatting
+        files: ^dbt/models/.*\.sql$
+        additional_dependencies: ['dbt-duckdb', 'sqlfluff-templater-dbt']
+        args: [--dialect, duckdb, --force]
+
+  # Markdown linting (fixes those 260 warnings!)
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.42.0
+    hooks:
+      - id: markdownlint-fix
+        name: Fix Markdown formatting
+
+  # Security: Detect secrets (disabled until baseline created)
+  # - repo: https://github.com/Yelp/detect-secrets
+  #   rev: v1.5.0
+  #   hooks:
+  #     - id: detect-secrets
+  #       name: Detect hardcoded secrets
+  #       args: ['--baseline', '.secrets.baseline']
+  #       exclude: package.lock.json

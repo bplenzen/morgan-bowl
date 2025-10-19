@@ -2,9 +2,12 @@
 
 A modern DataOps pipeline for analyzing Sleeper fantasy football data using Python, DBT, and DuckDB.
 
+> 📚 **[View Full Documentation](docs/)** | 🗺️ **[Feature Roadmap](docs/ROADMAP.md)** | 🚀 **[Quick Start](docs/setup/QUICK_START.md)**
+
 ## 📊 Project Overview
 
 This project demonstrates modern data engineering practices:
+
 - **Data Ingestion**: Python scripts pull data from Sleeper API
 - **Data Transformation**: DBT models create analytics-ready tables
 - **Data Storage**: DuckDB embedded database (no server needed)
@@ -20,6 +23,7 @@ Sleeper API → Python Ingestion → DuckDB → DBT Models → Analytics Tables
 ```
 
 ### Data Flow
+
 1. **Ingestion** (`src/ingestion/`): Fetch data from Sleeper API weekly
 2. **Staging** (`dbt/models/staging/`): Clean and standardize raw data
 3. **Analytics** (`dbt/models/marts/`): Business logic and aggregations
@@ -28,6 +32,7 @@ Sleeper API → Python Ingestion → DuckDB → DBT Models → Analytics Tables
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Python 3.11+ (via pyenv recommended)
 - Poetry for dependency management
 - Git for version control
@@ -86,12 +91,14 @@ morgan-bowl/
 ## 🗄️ Database Schema
 
 ### Staging Layer
+
 - `stg_league`: League information
 - `stg_users`: Fantasy managers
 - `stg_rosters`: Team rosters
 - `stg_matchups`: Weekly matchup results
 
 ### Analytics Layer
+
 - `fct_matchups`: Every game with opponent info, points, win/loss
 - `fct_standings`: Current league standings with stats
 
@@ -149,6 +156,7 @@ games = conn.execute("""
 ## 🛠️ Development
 
 ### Adding a New Week
+
 ```bash
 # Manual ingestion for specific week
 poetry run python -m ingestion.cli --week 7
@@ -158,6 +166,7 @@ poetry run python scripts/weekly_ingestion.py
 ```
 
 ### Updating DBT Models
+
 ```bash
 cd dbt
 poetry run dbt run          # Run all models
@@ -166,6 +175,7 @@ poetry run dbt test         # Run tests
 ```
 
 ### Code Quality
+
 ```bash
 # Linting
 poetry run ruff check src/
@@ -186,6 +196,7 @@ poetry run ruff format src/
 ## 🎓 Learning Objectives
 
 This project teaches:
+
 - ✅ **API Integration**: RESTful API consumption with error handling
 - ✅ **Data Modeling**: Dimensional modeling with DBT
 - ✅ **SQL**: Advanced queries, CTEs, window functions
@@ -223,12 +234,14 @@ MIT License - feel free to use this for your own fantasy leagues!
 Morgan Bowl is a personal sandbox for end-to-end DataOps practice using Sleeper fantasy football data. The goal is to learn modern, low-cost tooling while exercising the full lifecycle from ingestion through observability.
 
 ## Learning Objectives
+
 - Stand up a reproducible analytics engineering environment with dbt at the core.
 - Practice batch ingestion, modeling, and automated quality checks against a public API.
 - Build CI/CD and orchestration routines that mirror enterprise DataOps patterns.
 - Deliver lightweight analytics artifacts (dashboards, docs) while monitoring data health.
 
 ## Architecture Overview
+
 ```
            +-----------------+        +----------------+
            | Sleeper API     |        | External Feeds |
@@ -263,6 +276,7 @@ Morgan Bowl is a personal sandbox for end-to-end DataOps practice using Sleeper 
 ```
 
 ## Tool Stack
+
 - **Source**: Sleeper fantasy football REST API.
 - **Language & Package Management**: Python 3.11, Poetry, `ruff`, `black`, `isort`, `mypy`.
 - **Storage & Compute**: DuckDB for local warehouse; Parquet for persisted raw extracts.
@@ -274,6 +288,7 @@ Morgan Bowl is a personal sandbox for end-to-end DataOps practice using Sleeper 
 - **Documentation**: Markdown in `docs/`, dbt docs site, architecture diagram source (Excalidraw/diagrams.net).
 
 ## Project Plan
+
 1. **Setup**
    - Initialize Poetry project, pre-commit, `.editorconfig`, `.gitignore`.
    - Create repository skeleton (`src/`, `dbt/`, `analytics/`, `orchestration/`, `observability/`, `docs/`, `data/`).
@@ -302,6 +317,7 @@ Morgan Bowl is a personal sandbox for end-to-end DataOps practice using Sleeper 
    - Document SLAs, runbooks, and incident response workflow.
 
 ## Planned Repository Layout
+
 ```
 morgan-bowl/
 ├── src/ingestion/           # Sleeper API clients, CLI, utilities
@@ -318,6 +334,7 @@ morgan-bowl/
 ```
 
 ## Next Actions
+
 - Commit initial scaffolding (Poetry, pre-commit, directory structure).
 - Capture Sleeper league/season parameters and sample payloads.
 - Open GitLab issues per plan milestone to track learning goals and deliverables.

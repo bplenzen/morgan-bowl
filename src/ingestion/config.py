@@ -16,12 +16,13 @@ class ConfigurationError(ValueError):
 @dataclass(frozen=True)
 class IngestionConfig:
     """Configuration for data ingestion.
-    
+
     Args:
         league_id: Sleeper league identifier
         season: Fantasy football season year
         database_path: Path to DuckDB database file
     """
+
     league_id: str
     season: int
     database_path: Path
@@ -29,12 +30,12 @@ class IngestionConfig:
 
 def load_config() -> IngestionConfig:
     """Load ingestion configuration from environment variables.
-    
+
     Required env vars:
         SLEEPER_LEAGUE_ID: League identifier
         SLEEPER_SEASON: Season year
         DUCKDB_PATH: Path to database (defaults to data/warehouse.duckdb)
-    
+
     Raises:
         ConfigurationError: If required config is missing or invalid
     """
@@ -53,7 +54,7 @@ def load_config() -> IngestionConfig:
 
     # Default to data/warehouse.duckdb if not specified
     database_path = Path(os.getenv("DUCKDB_PATH", "data/warehouse.duckdb"))
-    
+
     # Ensure parent directory exists
     if database_path.parent != Path("."):
         database_path.parent.mkdir(parents=True, exist_ok=True)

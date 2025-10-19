@@ -1,4 +1,5 @@
 """Tests for the persistence module."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -32,8 +33,8 @@ class TestValidateIdentifier:
             "table name",  # space
             "table.name",  # dot
             "table;DROP",  # semicolon (SQL injection attempt)
-            "123table",    # starts with number
-            "",            # empty
+            "123table",  # starts with number
+            "",  # empty
             "table'name",  # quote
         ]
         for name in invalid_names:
@@ -57,7 +58,7 @@ class TestDataStore:
     def test_init_creates_schema(self, temp_db_path: Path):
         """DataStore should create the schema on init."""
         store = DataStore(temp_db_path, schema="my_schema")
-        
+
         with store.connect() as conn:
             schemas = conn.execute(
                 "SELECT schema_name FROM information_schema.schemata"
@@ -73,11 +74,13 @@ class TestDataStore:
     def test_write_table_replace_mode(self, store: DataStore):
         """write_table should replace existing table in replace mode."""
         records = [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]
-        
+
         store.write_table("users", records, mode="replace")
-        
+
         with store.connect() as conn:
-            result = conn.execute('SELECT * FROM test_schema.users ORDER BY id').fetchall()
+            result = conn.execute(
+                "SELECT * FROM test_schema.users ORDER BY id"
+            ).fetchall()
             assert len(result) == 2
             assert result[0] == (1, "Alice")
             assert result[1] == (2, "Bob")
@@ -86,9 +89,9 @@ class TestDataStore:
         """write_table in replace mode should overwrite existing data."""
         store.write_table("items", [{"id": 1, "value": "old"}], mode="replace")
         store.write_table("items", [{"id": 2, "value": "new"}], mode="replace")
-        
+
         with store.connect() as conn:
-            result = conn.execute('SELECT * FROM test_schema.items').fetchall()
+            result = conn.execute("SELECT * FROM test_schema.items").fetchall()
             assert len(result) == 1
             assert result[0] == (2, "new")
 
@@ -96,9 +99,11 @@ class TestDataStore:
         """write_table should append to existing table in append mode."""
         store.write_table("logs", [{"msg": "first"}], mode="replace")
         store.write_table("logs", [{"msg": "second"}], mode="append")
-        
+
         with store.connect() as conn:
-            result = conn.execute('SELECT msg FROM test_schema.logs ORDER BY msg').fetchall()
+            result = conn.execute(
+                "SELECT msg FROM test_schema.logs ORDER BY msg"
+            ).fetchall()
             assert len(result) == 2
             assert result[0][0] == "first"
             assert result[1][0] == "second"
@@ -106,7 +111,7 @@ class TestDataStore:
     def test_write_table_empty_records(self, store: DataStore):
         """write_table should handle empty records gracefully."""
         store.write_table("empty", [], mode="replace")
-        
+
         # Should not create table
         with store.connect() as conn:
             tables = conn.execute(
@@ -129,12 +134,14 @@ class TestDataStore:
         # DuckDB is actually very flexible with schema changes in append mode
         # It will add columns as needed, so this test verifies that behavior
         store.write_table("flexible", [{"id": 1, "name": "test"}], mode="replace")
-        
+
         # DuckDB allows appending with different columns - it adds NULL for missing columns
         store.write_table("flexible", [{"id": 2, "age": 25}], mode="append")
-        
+
         with store.connect() as conn:
-            result = conn.execute("SELECT * FROM test_schema.flexible ORDER BY id").fetchall()
+            result = conn.execute(
+                "SELECT * FROM test_schema.flexible ORDER BY id"
+            ).fetchall()
             # First row has name, second has age (with NULLs for missing columns)
             assert len(result) == 2
             assert result[0][0] == 1  # id from first row
@@ -144,7 +151,7 @@ class TestDataStore:
         """connect should return a DuckDB connection."""
         conn = store.connect()
         assert isinstance(conn, duckdb.DuckDBPyConnection)
-        
+
         # Should be able to execute queries
         result = conn.execute("SELECT 1 as test").fetchone()
         assert result == (1,)
@@ -154,13 +161,13 @@ class TestDataStore:
         """Multiple DataStore instances should work with same database."""
         store1 = DataStore(temp_db_path, schema="schema1")
         store2 = DataStore(temp_db_path, schema="schema2")
-        
+
         store1.write_table("data", [{"value": 1}])
         store2.write_table("data", [{"value": 2}])
-        
+
         with duckdb.connect(str(temp_db_path)) as conn:
             result1 = conn.execute("SELECT value FROM schema1.data").fetchone()
             result2 = conn.execute("SELECT value FROM schema2.data").fetchone()
-            
+
             assert result1 == (1,)
             assert result2 == (2,)

@@ -3,6 +3,7 @@
 ## Environment Setup ✅
 
 **Status**: Complete
+
 - Python 3.11.9 (via pyenv)
 - Virtual environment in `.venv/`
 - All dependencies installed via Poetry
@@ -18,6 +19,7 @@ cp .env.example .env
 ```
 
 Then edit `.env` and add:
+
 - **SLEEPER_LEAGUE_ID**: Find this in your Sleeper app URL when viewing your league
   - Example: `https://sleeper.com/leagues/1053946155782049792` → ID is `1053946155782049792`
 - **SLEEPER_SEASON**: The year (e.g., `2024`)
@@ -33,6 +35,7 @@ poetry run python -m ingestion.cli --week 1 --week 2
 ```
 
 This will:
+
 1. Fetch data from Sleeper API (league info, rosters, matchups, users)
 2. Store it in `data/warehouse.duckdb`
 3. Track ingestion metadata
@@ -71,6 +74,7 @@ Old/duplicate files archived in: archive/old-ingestion-20241014/
 ## Next Steps
 
 Once you have data ingested:
+
 1. **DBT Models**: Transform raw data into analytics-ready tables
 2. **Observability**: Add metrics and monitoring
 3. **Orchestration**: Schedule automated runs
@@ -79,17 +83,20 @@ Once you have data ingested:
 ## Troubleshooting
 
 **Missing dependencies?**
+
 ```bash
 poetry install
 ```
 
 **Wrong Python version?**
+
 ```bash
 poetry env use python3.11
 poetry install
 ```
 
 **Can't find your league ID?**
+
 - Open Sleeper app
 - Go to your league
 - Look at the URL - the long number is your league ID

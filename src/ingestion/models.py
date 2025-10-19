@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 class League(BaseModel):
     id: str = Field(..., alias="league_id")
     name: Optional[str] = None
+    season: Optional[str] = None  # Year as string (e.g., "2025")
 
 
 class User(BaseModel):

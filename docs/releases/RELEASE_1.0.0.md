@@ -3,6 +3,7 @@
 ## ✅ Completed Features
 
 ### Core Data Pipeline
+
 - [x] **Data Ingestion**: Automated Sleeper API integration
 - [x] **DBT Transformations**: Staging and analytics layers
 - [x] **Testing**: 82 total tests (23 unit + 17 DBT + 42 API parity + custom justice test)
@@ -10,16 +11,19 @@
 - [x] **Data Quality**: SQL injection protection, error handling, comprehensive validation
 
 ### Analytics Models
+
 - [x] **fct_matchups**: Week-by-week game results with opponent information
 - [x] **fct_standings**: Current league standings with win%, points for/against
 - [x] **fct_justice_record**: NEW! Luck analysis model showing who's lucky/unlucky
 
 ### Automation & Reporting
+
 - [x] **Weekly Auto-Ingestion**: Runs every Tuesday at 6 AM via GitLab schedule
 - [x] **Report Generator**: Markdown reports with luck analysis
 - [x] **Streamlit Dashboard**: Interactive web app for league mates
 
 ### Documentation
+
 - [x] README.md - Project overview
 - [x] QUICK_START.md - 15-minute setup guide
 - [x] GITLAB_SETUP.md - CI/CD configuration
@@ -31,6 +35,7 @@
 ## 🔒 Security (Ready for 1.0.0)
 
 ### ✅ Already Implemented
+
 - [x] `.env` in .gitignore (secrets not committed)
 - [x] CI/CD variables stored in GitLab (not in code)
 - [x] SQL injection protection (`_validate_identifier()`)
@@ -39,7 +44,9 @@
 ### 🚀 Recommended Additions (Optional for 1.1.0)
 
 #### 1. Dependency Vulnerability Scanning
+
 Add to `.gitlab-ci.yml`:
+
 ```yaml
 security:dependency_scan:
   stage: test
@@ -51,12 +58,15 @@ security:dependency_scan:
 ```
 
 #### 2. Secret Scanning
+
 Add pre-commit hook:
+
 ```bash
 poetry add --group dev detect-secrets
 ```
 
 Create `.pre-commit-config.yaml`:
+
 ```yaml
 repos:
   - repo: https://github.com/Yelp/detect-secrets
@@ -67,12 +77,15 @@ repos:
 ```
 
 #### 3. Database Backup Strategy
+
 Options:
+
 - **Simple**: Git commit the database (current approach - works for small DBs)
 - **Better**: Weekly backup to S3/Google Cloud Storage
 - **Best**: Incremental backups with retention policy
 
 Example backup script (add to GitLab schedule):
+
 ```python
 # scripts/backup_database.py
 import shutil
@@ -91,9 +104,11 @@ shutil.copy("data/warehouse.duckdb", f"backups/warehouse_{timestamp}.duckdb")
 ## 📊 Visualization Options
 
 ### Option 1: Streamlit (RECOMMENDED - FREE!)
+
 **Status**: ✅ Implemented!
 
 **Deployment**:
+
 1. Create account at [share.streamlit.io](https://share.streamlit.io)
 2. Connect GitLab/GitHub repository
 3. Set main file: `analytics/dashboard.py`
@@ -102,16 +117,19 @@ shutil.copy("data/warehouse.duckdb", f"backups/warehouse_{timestamp}.duckdb")
 **URL**: `https://morgan-bowl.streamlit.app` (or similar)
 
 **Pros**:
+
 - ✅ FREE hosting
 - ✅ Auto-deploys on git push
 - ✅ Beautiful UI with minimal code
 - ✅ Interactive charts, filters, buttons
 
 **Cons**:
+
 - ⚠️ Apps sleep after inactivity (wake up in ~30 seconds)
 - ⚠️ Public by default (can't password protect on free tier)
 
 ### Option 2: Evidence.dev
+
 Build markdown-based reports from DBT models.
 
 ```bash
@@ -122,23 +140,28 @@ npm run dev
 ```
 
 **Pros**:
+
 - Built for DBT projects
 - Markdown-based (easy to write)
 - Can deploy to Vercel/Netlify (free)
 
 **Cons**:
+
 - Less interactive than Streamlit
 - Requires learning Evidence syntax
 
 ### Option 3: GitLab Pages (Static HTML)
+
 Generate static HTML reports and host on GitLab Pages.
 
 **Pros**:
+
 - ✅ FREE
 - ✅ Already using GitLab
 - ✅ Can password protect
 
 **Cons**:
+
 - ⚠️ No interactivity
 - ⚠️ Manual refresh needed
 
@@ -149,6 +172,7 @@ Generate static HTML reports and host on GitLab Pages.
 ### Potential 1.1.0 Features
 
 #### 1. Playoff Probability Simulator
+
 Monte Carlo simulation for playoff chances.
 
 ```sql
@@ -158,15 +182,17 @@ Monte Carlo simulation for playoff chances.
 ```
 
 #### 2. Strength of Schedule
+
 Track opponent difficulty.
 
 ```sql
 -- New model: fct_strength_of_schedule.sql
--- Average opponent win% 
+-- Average opponent win%
 -- Remaining opponent strength
 ```
 
 #### 3. Player-Level Analytics
+
 Track individual player performance across rosters.
 
 ```sql
@@ -176,6 +202,7 @@ Track individual player performance across rosters.
 ```
 
 #### 4. Trade Analyzer
+
 Evaluate trade fairness.
 
 ```python
@@ -185,10 +212,13 @@ Evaluate trade fairness.
 ```
 
 #### 5. Weekly Email/Slack Notifications
+
 Already implemented in `scripts/generate_report.py`!
 
 **To enable**:
+
 1. Set environment variables:
+
    ```bash
    export EMAIL_SENDER="your-email@gmail.com"
    export EMAIL_PASSWORD="your-app-password"
@@ -197,6 +227,7 @@ Already implemented in `scripts/generate_report.py`!
    ```
 
 2. Update `.gitlab-ci.yml`:
+
    ```yaml
    notify:weekly_report:
      stage: test
@@ -285,6 +316,7 @@ Already implemented in `scripts/generate_report.py`!
 ## 🏆 Success Metrics
 
 **1.0.0 is READY when**:
+
 - ✅ Pipeline runs successfully every week without intervention
 - ✅ All tests pass automatically
 - ✅ League mates can access and use the dashboard
@@ -318,6 +350,7 @@ Already implemented in `scripts/generate_report.py`!
 ## 🚀 Deployment Commands
 
 ### Deploy Dashboard to Streamlit Cloud
+
 ```bash
 # 1. Ensure code is pushed to GitLab
 git add .
@@ -331,6 +364,7 @@ git push origin main
 ```
 
 ### Format Code
+
 ```bash
 poetry run black .
 poetry run isort .
@@ -338,12 +372,14 @@ poetry run ruff check .
 ```
 
 ### Create Release Tag
+
 ```bash
 git tag -a v1.0.0 -m "Release 1.0.0: Justice Record + Streamlit Dashboard"
 git push origin v1.0.0
 ```
 
 ### Verify Everything Works
+
 ```bash
 # Run all tests
 poetry run pytest

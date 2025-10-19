@@ -13,6 +13,7 @@ with base as (
     from {{ ref('fct_matchups') }}
     group by 1, 2, 3
 ),
+
 calculated as (
     select
         roster_id,
@@ -24,7 +25,8 @@ calculated as (
         losses,
         games_played,
         wins + losses as decisions,
-        case when games_played = 0 then 0 else wins::double / games_played end as win_pct,
+        case when games_played = 0 then 0 else wins::double / games_played end
+            as win_pct,
         points_for - points_against as point_diff
     from base
 )

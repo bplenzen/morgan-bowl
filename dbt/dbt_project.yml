@@ -15,6 +15,11 @@ dispatch:
   - macro_namespace: dbt
     search_order: [dbt, dbt_duckdb]
 
+# Project variables - configure these for your league
+vars:
+  league_size: 12  # Total number of teams in the league
+  playoff_teams: 6  # Number of teams that make playoffs (top half)
+
 models:
   morgan_bowl_dbt:
     +schema: analytics

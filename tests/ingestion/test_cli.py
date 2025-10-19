@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import Mock
-
-import pytest
 
 from ingestion.cli import main
 from ingestion.config import ConfigurationError, IngestionConfig
@@ -26,9 +23,11 @@ def test_cli_invokes_pipeline(monkeypatch, tmp_path):
 
     # Mock ingestion run
     captured_args = {}
+
     def fake_ingestion(**kwargs):
         captured_args.update(kwargs)
         return {"run_id": "test", "counts": {"users": 12}}
+
     monkeypatch.setattr("ingestion.cli.run_ingestion", fake_ingestion)
 
     # Run CLI with specific weeks
@@ -54,9 +53,11 @@ def test_cli_defaults_to_full_season(monkeypatch, tmp_path):
     monkeypatch.setattr("ingestion.cli.DataStore", Mock)
 
     captured_args = {}
+
     def fake_ingestion(**kwargs):
         captured_args.update(kwargs)
         return {"run_id": "test", "counts": {}}
+
     monkeypatch.setattr("ingestion.cli.run_ingestion", fake_ingestion)
 
     # Run CLI with no arguments
@@ -70,6 +71,7 @@ def test_cli_defaults_to_full_season(monkeypatch, tmp_path):
 def test_cli_handles_configuration_error(monkeypatch):
     def raise_err():
         raise ConfigurationError("test error")
+
     monkeypatch.setattr("ingestion.cli.load_config", raise_err)
 
     exit_code = main([])

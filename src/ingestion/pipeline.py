@@ -26,7 +26,7 @@ def validate_week_range(week: int, season: int = 2025) -> bool:
     """Validate that a week number is valid for the given season."""
     if week < 1 or week > 18:
         raise ValueError(f"Week {week} is invalid. Must be between 1 and 18.")
-    
+
     # Check if week is in the future
     current_date = datetime.now()
     if season > current_date.year or (season == current_date.year and week > 18):
@@ -63,16 +63,16 @@ def run_ingestion(
     weeks: Sequence[int],
 ) -> dict:
     """Run the ingestion pipeline with retries and validation.
-    
+
     Args:
         config: Ingestion configuration
         client: Sleeper API client
         store: Data store for persistence
         weeks: Sequence of week numbers to ingest
-        
+
     Returns:
         Dict containing run summary
-        
+
     Raises:
         ValueError: If week validation fails
         Exception: If API calls or data processing fails
@@ -86,14 +86,24 @@ def run_ingestion(
     )
 
     try:
+        # Fetch league data first to get the season
+        league: League = _fetch_with_retry(client, "get_league", config.league_id)
+
+        # Auto-detect season from league data (fallback to config if not available)
+        season = int(league.season) if league.season else config.season
+        logger.info(
+            "Using season from league data", season=season, league_name=league.name
+        )
+
         # Validate all weeks before starting
         for week in weeks:
-            validate_week_range(week, config.season)
+            validate_week_range(week, season)
 
-        # Fetch and store league data
-        league: League = _fetch_with_retry(client, "get_league", config.league_id)
+        # Fetch other league data
         users: list[User] = _fetch_with_retry(client, "get_users", config.league_id)
-        rosters: list[Roster] = _fetch_with_retry(client, "get_rosters", config.league_id)
+        rosters: list[Roster] = _fetch_with_retry(
+            client, "get_rosters", config.league_id
+        )
 
         store.write_table("league", [_dump(league)])
         store.write_table("users", _dump_many(users))

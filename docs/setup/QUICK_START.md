@@ -5,6 +5,7 @@ Get your GitLab CI/CD pipeline running in 15 minutes!
 ## ✅ What's Already Done
 
 You have:
+
 - ✅ Python environment with all dependencies
 - ✅ Data for weeks 1-6 ingested
 - ✅ DBT models built and tested
@@ -39,10 +40,11 @@ git commit -m "Initial commit: Morgan Bowl data pipeline"
    - Click "Create project"
 
 3. **Connect your local repo**:
+
    ```bash
    # Use the URL GitLab shows you (replace YOUR_USERNAME)
    git remote add origin https://gitlab.com/YOUR_USERNAME/morgan-bowl.git
-   
+
    # Push code
    git branch -M main
    git push -u origin main
@@ -51,6 +53,7 @@ git commit -m "Initial commit: Morgan Bowl data pipeline"
 ### Step 3: Configure Secrets (2 minutes)
 
 In GitLab:
+
 1. Go to **Settings → CI/CD**
 2. Expand **Variables**
 3. Add these variables:
@@ -81,17 +84,19 @@ In GitLab:
 4. Click **"Run pipeline"**
 
 Watch it run! You should see:
+
 - ✅ Green checkmarks as jobs complete
 - Job `ingest:weekly` will show "Nothing to do" (already have week 6)
 - Jobs `test:dbt` and `test:python` should pass
 
-## 🎉 Done!
+## 🎉 Done
 
 Your pipeline is now scheduled to run **every Tuesday at 6:00 AM**.
 
 ### What Happens Next Week (Oct 21)?
 
 On Tuesday morning:
+
 1. GitLab wakes up at 6 AM
 2. Runs `weekly_ingestion.py`
 3. Script sees week 7 is complete
@@ -105,19 +110,23 @@ You don't have to do anything! ✨
 ## 🐛 Troubleshooting
 
 ### "Pipeline failed - permission denied"
+
 - Check that CI/CD variables are set correctly
 - Make sure your GitLab account has permission to run pipelines (free tier = 400 min/month)
 
 ### "Can't find database file"
+
 - First run will create database from scratch
 - Subsequent runs will download from artifacts
 
 ### "Week X already exists"
+
 - This is fine! Script skips weeks that are already ingested
 
 ## 📱 Optional: Get Notifications
 
 Set up Slack/email notifications:
+
 1. Go to **Settings → Integrations**
 2. Choose Slack or Email
 3. Configure webhook/settings

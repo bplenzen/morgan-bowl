@@ -1,15 +1,18 @@
 
 # 🏈 Morgan Bowl Week 6 Report
-*Generated on October 14, 2025*
+
+*Generated on October 19, 2025*
 
 ---
 
 ## 📊 Week 6 Results
 
 ### Highest Scorer of the Week
+
 **jamespancakes** put up **169.8 points**! 🔥
 
 ### Lowest Scorer of the Week
+
 **wsongb** only managed **81.54 points** 😬
 
 ### All Matchups
@@ -37,30 +40,31 @@
 4. **mrdorsey** (4.0-2.0) - 749.7 PF
 5. **AKMCG** (4.0-2.0) - 712.26 PF
 
-
 ---
 
 ## 🍀 Luck Watch
 
 ### Luckiest Teams (Winning More Than They Deserve)
+
 - **mrbeef1**: 5-1 actual, 4-2 deserved (+1) Lucky 🍀
 - **jacklamb**: 4-2 actual, 3-3 deserved (+1) Lucky 🍀
 - **georgeuhrick**: 3-3 actual, 2-4 deserved (+1) Lucky 🍀
 
 ### Unluckiest Teams (Losing More Than They Deserve)
+
 - **bplenzen**: 2-4 actual, 4-2 deserved (-2) VERY UNLUCKY 😭😭
 - **jamespancakes**: 5-1 actual, 6-0 deserved (-1) Unlucky 😞
 - **MicroMaestros**: 4-2 actual, 5-1 deserved (-1) Unlucky 😞
-
 
 ---
 
 ## 📈 Justice Record Explained
 
-Each week, the **top 6 scorers** get a "justice win" and the **bottom 6** get a "justice loss". 
+Each week, the **top 6 scorers** get a "justice win" and the **bottom 6** get a "justice loss".
 Your **justice record** shows what your record *should* be based on scoring performance.
 
 **Luck Differential** = Actual Wins - Justice Wins
+
 - Positive numbers = You're lucky! 🍀
 - Negative numbers = You're unlucky! 😭
 

@@ -5,6 +5,7 @@
 **65 Total Tests** protecting your data pipeline:
 
 ### 1. Unit Tests (23 tests)
+
 **Location:** `tests/ingestion/`
 
 - SQL injection protection
@@ -13,6 +14,7 @@
 - Configuration management
 
 ### 2. DBT Tests (17 tests)
+
 **Location:** `dbt/tests/` and model YAML files
 
 - Not null constraints
@@ -20,16 +22,19 @@
 - Referential integrity
 - Business logic (2 rosters per matchup)
 
-### 3. Integration Tests (42 tests) ⭐ NEW!
+### 3. Integration Tests (42 tests) ⭐ NEW
+
 **Location:** `tests/integration/test_api_parity.py`
 
 **SOURCE OF TRUTH validation** - compares DB vs live Sleeper API:
 
 #### API Parity (12 tests)
+
 - ✅ Matchup points match API exactly (all 6 weeks)
 - ✅ Matchup IDs match API (correct opponent pairings)
 
 #### Data Completeness (16 tests)
+
 - ✅ All weeks ingested (1-6)
 - ✅ All 12 rosters present each week
 - ✅ Exactly 6 matchups per week
@@ -37,6 +42,7 @@
 - ✅ All users present
 
 #### Data Quality (14 tests)
+
 - ✅ Points are reasonable (0-300 range)
 - ✅ No negative/null scores
 - ✅ Each matchup has exactly 2 teams
@@ -63,6 +69,7 @@
 ## 🔄 When Tests Run
 
 ### Locally (During Development)
+
 ```bash
 # All tests
 poetry run pytest tests/ -v
@@ -78,12 +85,15 @@ cd dbt && poetry run dbt test
 ```
 
 ### In CI/CD (GitLab)
+
 Automatically runs on:
+
 - ✅ Scheduled pipelines (every Tuesday)
 - ✅ Manual pipeline runs
 - ✅ Pull requests (future)
 
 Pipeline stages:
+
 1. **Ingest** - Pull data from Sleeper
 2. **Build** - Run DBT transformations
 3. **Test** - Validate everything:
@@ -94,36 +104,44 @@ Pipeline stages:
 ## 🚨 What Happens if Tests Fail?
 
 ### API Parity Test Failure
+
 **This is CRITICAL** - means your data doesn't match Sleeper!
 
 Example failure:
+
 ```
 Week 5, Roster 3: API=132.5, DB=130.2
 AssertionError: Points don't match!
 ```
 
 **What to do:**
+
 1. Check if Sleeper had a stat correction
 2. Re-run ingestion for that week
 3. Investigate if there's a bug in ingestion logic
 
 ### DBT Test Failure
+
 **Business logic violated**
 
 Example:
+
 ```
 test not_null_fct_matchups_roster_id failed
 ```
 
 **What to do:**
+
 1. Check DBT logs: `dbt/logs/dbt.log`
 2. Run failing test locally: `dbt test --select <test_name>`
 3. Fix the model or data issue
 
 ### Unit Test Failure
+
 **Code regression**
 
 **What to do:**
+
 1. Review the PR/commit that broke it
 2. Fix the code
 3. Add test to prevent regression
@@ -131,6 +149,7 @@ test not_null_fct_matchups_roster_id failed
 ## 📊 Test Coverage Report
 
 Run this to see coverage:
+
 ```bash
 poetry run pytest tests/ --cov=src --cov-report=html
 open htmlcov/index.html
@@ -139,16 +158,18 @@ open htmlcov/index.html
 ## 🎓 Why This Matters
 
 ### Without These Tests
-❌ Bad data enters your pipeline  
-❌ You don't know when something breaks  
-❌ Historical data could be wrong  
-❌ Hard to trust your analytics  
+
+❌ Bad data enters your pipeline
+❌ You don't know when something breaks
+❌ Historical data could be wrong
+❌ Hard to trust your analytics
 
 ### With These Tests
-✅ **Confidence** - Data matches source of truth  
-✅ **Early Detection** - Catch issues immediately  
-✅ **Automation** - No manual checking needed  
-✅ **Documentation** - Tests show what should be true  
+
+✅ **Confidence** - Data matches source of truth
+✅ **Early Detection** - Catch issues immediately
+✅ **Automation** - No manual checking needed
+✅ **Documentation** - Tests show what should be true
 
 ## 🏢 Enterprise Patterns You're Learning
 
@@ -176,6 +197,7 @@ open htmlcov/index.html
 Want even more confidence?
 
 ### Statistical Tests (DBT Great Expectations)
+
 ```yaml
 # In DBT model YAML
 tests:
@@ -188,6 +210,7 @@ tests:
 ```
 
 ### Historical Consistency Checks
+
 ```python
 def test_past_weeks_unchanged():
     """Ensure historical data doesn't change on re-ingestion"""
@@ -196,6 +219,7 @@ def test_past_weeks_unchanged():
 ```
 
 ### Data Profiling
+
 ```python
 # Generate weekly reports:
 # - Min/max/avg points per week
@@ -206,6 +230,7 @@ def test_past_weeks_unchanged():
 ## 🎯 Summary
 
 You now have **enterprise-grade data validation**:
+
 - 42 tests that validate against Sleeper API
 - Automatic execution in CI/CD
 - Pipeline blocks if data is wrong

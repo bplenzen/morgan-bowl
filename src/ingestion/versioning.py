@@ -11,15 +11,19 @@ import structlog
 
 logger = structlog.get_logger("morgan_bowl.versioning")
 
+
 class VersionStatus(str, Enum):
     """Status of a data version run."""
+
     IN_PROGRESS = "in_progress"
     SUCCESS = "success"
     FAILED = "failed"
 
+
 @dataclass
 class DataVersion:
     """Track data versions for incremental loads and backfills."""
+
     timestamp: datetime
     run_id: str
     is_backfill: bool
@@ -40,13 +44,13 @@ class DataVersion:
         season: int = 2025,
     ) -> DataVersion:
         """Create a new data version.
-        
+
         Args:
             run_id: Optional unique identifier for this run
             is_backfill: Whether this is a backfill run
             weeks: Sequence of weeks being loaded
             season: Fantasy football season year
-            
+
         Returns:
             New DataVersion instance
         """
@@ -65,13 +69,13 @@ class DataVersion:
             season=season,
             weeks=sorted(weeks),
         )
-        
+
     def to_dict(self) -> dict:
         """Convert to dictionary for serialization."""
         data = asdict(self)
         data["timestamp"] = self.timestamp.isoformat()
         return data
-        
+
     @classmethod
     def from_dict(cls, data: dict) -> DataVersion:
         """Create instance from dictionary."""
@@ -102,33 +106,34 @@ class DataVersion:
             error=error,
         )
 
+
 class VersionStore:
     """Store and retrieve data versions."""
-    
+
     def __init__(self, data_dir: str | pathlib.Path):
         self.data_dir = pathlib.Path(data_dir)
         self.versions_file = self.data_dir / "versions.json"
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        
+
     def save_version(self, version: DataVersion) -> None:
         """Save a version to the store."""
         versions = self.load_versions()
         versions.append(version.to_dict())
-        
+
         with self.versions_file.open("w") as f:
             json.dump(versions, f, indent=2)
-            
+
         logger.info(
             "version_saved",
             run_id=version.run_id,
             file=str(self.versions_file),
         )
-            
+
     def load_versions(self) -> list[dict]:
         """Load all versions from the store."""
         if not self.versions_file.exists():
             return []
-            
+
         with self.versions_file.open() as f:
             try:
                 return json.load(f)
@@ -139,20 +144,14 @@ class VersionStore:
                     error=str(e),
                 )
                 return []
-                
+
     def get_latest_version(self) -> Optional[DataVersion]:
         """Get the most recent successful version."""
-        versions = [
-            DataVersion.from_dict(v) 
-            for v in self.load_versions()
-        ]
-        
-        successful = [
-            v for v in versions 
-            if v.status == VersionStatus.SUCCESS
-        ]
-        
+        versions = [DataVersion.from_dict(v) for v in self.load_versions()]
+
+        successful = [v for v in versions if v.status == VersionStatus.SUCCESS]
+
         if not successful:
             return None
-            
+
         return max(successful, key=lambda v: v.timestamp)

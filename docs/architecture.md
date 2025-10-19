@@ -3,6 +3,7 @@
 This document will collect diagrams, sequencing details, and assumptions as the Morgan Bowl DataOps stack evolves.
 
 ## Components
+
 - **Ingestion**: Python clients pulling Sleeper league, roster, matchup, and transaction data.
 - **Processing**: DuckDB as landing zone with dbt transformations to derive marts.
 - **Automation**: Prefect flows and GitLab CI orchestrating ingestion + dbt steps.

@@ -9,13 +9,16 @@ with weekly_ranks as (
         m.manager_name,
         m.points,
         -- Rank teams by points (highest = 1)
-        row_number() over (partition by m.week order by m.points desc) as points_rank,
+        m.win_flag as actual_win,
         -- Also track actual win from matchup
-        m.win_flag as actual_win
+        row_number()
+            over (partition by m.week order by m.points desc)
+            as points_rank
     from {{ ref('fct_matchups') }} as m
 ),
 
--- Determine if each team was in top 6 (justice win) or bottom 6 (justice loss)
+-- Determine if each team was in top half (justice win) or bottom half (justice loss)
+-- Using configurable playoff_teams variable (default: 6 for 12-team league)
 weekly_justice_wins as (
     select
         week,
@@ -24,9 +27,9 @@ weekly_justice_wins as (
         manager_name,
         points,
         points_rank,
-        -- Justice win if you're in the top 6 scorers that week
+        -- Justice win if you're in the top playoff_teams scorers that week
         case
-            when points_rank <= 6 then 1
+            when points_rank <= {{ var('playoff_teams', 6) }} then 1
             else 0
         end as justice_win,
         actual_win
@@ -57,29 +60,29 @@ select
     owner_id,
     manager_name,
     weeks_played,
-    
+
     -- Justice record
     justice_wins,
     justice_losses,
-    round(justice_wins::double / weeks_played, 3) as justice_win_pct,
-    
-    -- Actual record
     actual_wins,
+
+    -- Actual record
     actual_losses,
+    round(justice_wins::double / weeks_played, 3) as justice_win_pct,
     round(actual_wins::double / weeks_played, 3) as actual_win_pct,
-    
+
     -- The LUCK METRIC!
     actual_wins - justice_wins as luck_differential,
-    
+
     -- Luck interpretation
     case
-        when actual_wins - justice_wins > 1 then 'VERY LUCKY ðŸ€ðŸ€'
-        when actual_wins - justice_wins = 1 then 'Lucky ðŸ€'
-        when actual_wins - justice_wins = 0 then 'Fair âš–ï¸'
-        when actual_wins - justice_wins = -1 then 'Unlucky ðŸ˜ž'
+        when actual_wins - justice_wins > 1 then 'VERY LUCKY ðŸ\x8d€ðŸ\x8d€'
+        when actual_wins - justice_wins = 1 then 'Lucky ðŸ\x8d€'
+        when actual_wins - justice_wins = 0 then 'Fair âš–ï¸\x8f'
+        when actual_wins - justice_wins = -1 then 'Unlucky ðŸ˜\x9e'
         when actual_wins - justice_wins < -1 then 'VERY UNLUCKY ðŸ˜­ðŸ˜­'
     end as luck_status,
-    
+
     -- Supporting stats
     round(avg_points_per_week, 2) as avg_points_per_week
 

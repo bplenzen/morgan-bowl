@@ -32,12 +32,14 @@ Your league mates can access it at a public URL like:
 ## How Justice Record Works
 
 Each week:
+
 - Top 6 scorers get a "justice win" (1-0 for that week)
 - Bottom 6 scorers get a "justice loss" (0-1 for that week)
 
 Your **justice record** = what your record *should* be based on scoring performance.
 
 **Luck Differential** = Actual Wins - Justice Wins
+
 - Positive = Lucky (winning more than you deserve)
 - Zero = Fair (getting what you deserve)
 - Negative = Unlucky (losing more than you deserve)

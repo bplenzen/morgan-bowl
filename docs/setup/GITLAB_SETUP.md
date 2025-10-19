@@ -81,6 +81,7 @@ Set up the pipeline to run every Tuesday at 6:00 AM:
 4. Click **"Save pipeline schedule"**
 
 ### Understanding Cron Syntax
+
 ```
  ┌───────────── minute (0 - 59)
  │ ┌───────────── hour (0 - 23)
@@ -90,10 +91,11 @@ Set up the pipeline to run every Tuesday at 6:00 AM:
  │ │ │ │ │
  0 6 * * 2
 ```
+
 - `0` = minute 0 (top of the hour)
 - `6` = 6 AM
 - `*` = every day of month
-- `*` = every month  
+- `*` = every month
 - `2` = Tuesday (0=Sunday, 1=Monday, 2=Tuesday, etc.)
 
 ## 🧪 Step 6: Test the Pipeline
@@ -106,6 +108,7 @@ Before waiting for the schedule, test it manually:
 4. Click **"Run pipeline"**
 
 Watch it run! You should see:
+
 - ✅ `ingest:weekly` - Data ingestion
 - ✅ `test:dbt` - DBT tests
 - ✅ `test:python` - Python tests
@@ -115,11 +118,13 @@ Watch it run! You should see:
 **Challenge**: Your DuckDB file grows each week. GitLab has two options:
 
 ### Option A: Use Artifacts (Simple)
+
 - The `.gitlab-ci.yml` already stores `warehouse.duckdb` as an artifact
 - Downloads it at the start of each run
 - **Limitation**: Artifacts expire (default 7 days)
 
 ### Option B: Use Git LFS (Better for long-term)
+
 ```bash
 # Install Git LFS
 brew install git-lfs
@@ -133,6 +138,7 @@ git push
 ```
 
 ### Option C: Use External Storage (Most Enterprise)
+
 - Store DuckDB in S3, Google Cloud Storage, or GitLab's package registry
 - Not necessary for your use case, but good to know
 
@@ -151,6 +157,7 @@ Get notified when ingestion completes:
 ## 🎯 What Happens Now?
 
 Every **Tuesday at 6:00 AM**:
+
 1. GitLab runner starts
 2. Checks current NFL week
 3. Ingests any missing weeks
@@ -162,18 +169,22 @@ Every **Tuesday at 6:00 AM**:
 ## 🐛 Troubleshooting
 
 ### Pipeline fails with "No such file: .env"
+
 - The `.env` file is gitignored (good for security)
 - Use CI/CD variables instead (Step 4)
 
 ### "poetry: command not found"
+
 - The pipeline installs Poetry automatically
 - If it fails, check the `before_script` in `.gitlab-ci.yml`
 
 ### Database file too large
+
 - Upgrade to Git LFS (Option B above)
 - Or exclude from git entirely and use external storage
 
 ### Wrong timezone
+
 - Update the schedule's timezone setting
 - GitLab uses UTC by default
 

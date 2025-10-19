@@ -3,10 +3,11 @@ Morgan Bowl Analytics - Simple Examples
 
 This shows you what you can actually DO with your DBT pipeline.
 """
+
 import duckdb
 
 # Connect to your database
-con = duckdb.connect('data/warehouse.duckdb')
+con = duckdb.connect("data/warehouse.duckdb")
 
 print("=" * 80)
 print("MORGAN BOWL ANALYTICS - WHAT YOU CAN DO")
@@ -20,8 +21,9 @@ print("-" * 80)
 print("\nBefore DBT: You had to write complex SQL to calculate standings")
 print("After DBT: Just query the pre-built table!\n")
 
-standings = con.execute("""
-    SELECT 
+standings = con.execute(
+    """
+    SELECT
         manager_name,
         wins,
         losses,
@@ -31,12 +33,13 @@ standings = con.execute("""
     FROM main_analytics.fct_standings
     ORDER BY wins DESC, total_points DESC
     LIMIT 5
-""").fetchall()
+"""
+).fetchall()
 
 print(f"{'Manager':<20} {'W-L':<10} {'PF':<10} {'PA':<10} {'Win%':<10}")
 print("-" * 80)
-for name, w, l, pf, pa, pct in standings:
-    print(f"{name:<20} {w}-{l:<8} {pf:<10.1f} {pa:<10.1f} {pct}%")
+for name, w, losses, pf, pa, pct in standings:
+    print(f"{name:<20} {w}-{losses:<8} {pf:<10.1f} {pa:<10.1f} {pct}%")
 
 # ============================================================================
 # EXAMPLE 2: Head-to-Head Records
@@ -46,14 +49,15 @@ print("-" * 80)
 print("See how you've done against specific opponents\n")
 
 # Let's see your (bplenzen) record vs jamespancakes (the leader)
-h2h = con.execute("""
-    SELECT 
+h2h = con.execute(
+    """
+    SELECT
         week,
         manager_name,
         ROUND(points, 2) as your_points,
         opponent_manager_name,
         ROUND(opponent_points, 2) as their_points,
-        CASE 
+        CASE
             WHEN win_flag = 1 THEN 'WIN'
             WHEN win_flag = 0 THEN 'LOSS'
         END as result
@@ -61,12 +65,15 @@ h2h = con.execute("""
     WHERE manager_name = 'bplenzen'
         AND opponent_manager_name = 'jamespancakes'
     ORDER BY week
-""").fetchall()
+"""
+).fetchall()
 
 if h2h:
     print("YOU (bplenzen) vs jamespancakes:")
     for week, you, your_pts, them, their_pts, result in h2h:
-        print(f"  Week {week}: You scored {your_pts}, they scored {their_pts} - {result}")
+        print(
+            f"  Week {week}: You scored {your_pts}, they scored {their_pts} - {result}"
+        )
 else:
     print("Haven't played jamespancakes yet!")
 
@@ -77,8 +84,9 @@ print("\n\n📈 EXAMPLE 3: Your Weekly Scoring Trend")
 print("-" * 80)
 print("Track your points week-by-week\n")
 
-weekly = con.execute("""
-    SELECT 
+weekly = con.execute(
+    """
+    SELECT
         week,
         ROUND(points, 2) as points,
         ROUND(opponent_points, 2) as opp_points,
@@ -86,7 +94,8 @@ weekly = con.execute("""
     FROM main_analytics.fct_matchups
     WHERE manager_name = 'bplenzen'
     ORDER BY week
-""").fetchall()
+"""
+).fetchall()
 
 print(f"{'Week':<8} {'Your Pts':<12} {'Opp Pts':<12} {'Result':<8}")
 print("-" * 80)
@@ -106,8 +115,9 @@ print("-" * 80)
 print("High points but low wins = UNLUCKY (bad scheduling)")
 print("Low points but high wins = LUCKY (easy schedule)\n")
 
-luck = con.execute("""
-    SELECT 
+luck = con.execute(
+    """
+    SELECT
         manager_name,
         wins,
         ROUND(points_for, 2) as points,
@@ -117,7 +127,8 @@ luck = con.execute("""
         ROUND(wins - (6.0 * (points_for - 600) / 300), 1) as luck_factor
     FROM main_analytics.fct_standings
     ORDER BY luck_factor DESC
-""").fetchall()
+"""
+).fetchall()
 
 print(f"{'Manager':<20} {'Wins':<8} {'Avg Pts':<12} {'Expected':<12} {'Luck':<10}")
 print("-" * 80)
@@ -131,8 +142,9 @@ for name, wins, pts, avg, exp_w, luck in luck:
 print("\n\n💥 EXAMPLE 5: Biggest Blowouts & Closest Games")
 print("-" * 80)
 
-blowouts = con.execute("""
-    SELECT 
+blowouts = con.execute(
+    """
+    SELECT
         week,
         manager_name,
         ROUND(points, 2) as winner_pts,
@@ -143,14 +155,18 @@ blowouts = con.execute("""
     WHERE win_flag = 1
     ORDER BY ABS(point_diff) DESC
     LIMIT 3
-""").fetchall()
+"""
+).fetchall()
 
 print("\nBiggest Blowouts:")
 for week, winner, w_pts, loser, l_pts, margin in blowouts:
-    print(f"  Week {week}: {winner} ({w_pts}) destroyed {loser} ({l_pts}) by {margin} pts")
+    print(
+        f"  Week {week}: {winner} ({w_pts}) destroyed {loser} ({l_pts}) by {margin} pts"
+    )
 
-nail_biters = con.execute("""
-    SELECT 
+nail_biters = con.execute(
+    """
+    SELECT
         week,
         manager_name,
         ROUND(points, 2) as winner_pts,
@@ -161,29 +177,34 @@ nail_biters = con.execute("""
     WHERE win_flag = 1
     ORDER BY ABS(point_diff) ASC
     LIMIT 3
-""").fetchall()
+"""
+).fetchall()
 
 print("\nClosest Games (Nail-biters):")
 for week, winner, w_pts, loser, l_pts, margin in nail_biters:
-    print(f"  Week {week}: {winner} ({w_pts}) barely beat {loser} ({l_pts}) by {margin} pts")
+    print(
+        f"  Week {week}: {winner} ({w_pts}) barely beat {loser} ({l_pts}) by {margin} pts"
+    )
 
 # ============================================================================
 print("\n" + "=" * 80)
 print("💡 THE POINT: DBT did all the hard work for you!")
 print("=" * 80)
-print("""
+print(
+    """
 Instead of writing complex SQL every time:
   ❌ Manually joining matchups, rosters, users
   ❌ Calculating wins/losses from point differentials
   ❌ Aggregating across multiple week tables
-  
+
 You now just query clean tables:
   ✅ fct_matchups - every game with all the details
   ✅ fct_standings - pre-calculated standings
-  
+
 Want to build a dashboard? A Slack bot? A weekly report?
 Just query these tables - the hard work is already done!
-""")
+"""
+)
 
 print("\n📚 Try it yourself:")
 print("  poetry run python examples.py")

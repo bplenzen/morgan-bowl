@@ -45,10 +45,10 @@ def resolve_weeks(weeks: list[int] | None) -> list[int]:
 
 def main(argv: list[str] | None = None) -> int:
     """Run the ingestion pipeline.
-    
+
     Args:
         argv: Command line arguments (defaults to sys.argv[1:])
-        
+
     Returns:
         Exit code (0 for success, 1 for error)
     """
@@ -89,7 +89,7 @@ def main(argv: list[str] | None = None) -> int:
         logger.error("configuration_error", error=str(e))
         print(f"Configuration error: {e}", file=sys.stderr)
         return 1
-        
+
     except Exception as e:
         logger.error("unexpected_error", error=str(e))
         print(f"Error: {e}", file=sys.stderr)

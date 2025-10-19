@@ -28,7 +28,7 @@ models:
         description: "Total losses counted from fct_matchups."
       - name: win_pct
         description: "Wins divided by games played."
-  
+
   - name: fct_justice_record
     description: "Justice record (median wins) vs actual record to measure luck. Teams scoring above the weekly median earn 'justice wins'. Luck differential shows how lucky/unlucky each team has been."
     columns:
@@ -53,7 +53,7 @@ models:
         tests:
           - accepted_values:
               values: ['VERY LUCKY 🍀🍀', 'Lucky 🍀', 'Fair ⚖️', 'Unlucky 😞', 'VERY UNLUCKY 😭😭']
-  
+
   - name: fct_advanced_luck
     description: "Advanced luck analysis using multiple statistical approaches: all-play record, expected wins, schedule strength, close game performance, and composite luck score."
     columns:

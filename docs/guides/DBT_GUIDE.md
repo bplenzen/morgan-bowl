@@ -5,14 +5,18 @@
 Successfully created a complete DBT transformation pipeline for Morgan Bowl analytics!
 
 ### Staging Layer (`main_staging` schema)
+
 Clean, standardized views of raw data:
+
 - ✅ `stg_league` - League metadata
-- ✅ `stg_users` - User/manager information  
+- ✅ `stg_users` - User/manager information
 - ✅ `stg_rosters` - Roster assignments
 - ✅ `stg_matchups` - All weeks union'd (weeks 1-6 with zero-padding)
 
 ### Analytics Layer (`main_analytics` schema)
+
 Business-ready fact tables:
+
 - ✅ `fct_matchups` - Every matchup with opponent info, point differentials, win/loss flags
 - ✅ `fct_standings` - Current league standings with wins, losses, points for/against, win%
 
@@ -21,27 +25,32 @@ Business-ready fact tables:
 ## 🎯 How to Use
 
 ### Run All DBT Models
+
 ```bash
 cd dbt
 poetry run dbt run
 ```
 
 ### Run Just Staging
+
 ```bash
 poetry run dbt run --select staging
 ```
 
 ### Run Just Marts
+
 ```bash
 poetry run dbt run --select marts
 ```
 
 ### Run Tests
+
 ```bash
 poetry run dbt test
 ```
 
 ### Query the Results
+
 ```bash
 # Check standings
 poetry run python -c "import duckdb; con = duckdb.connect('data/warehouse.duckdb'); \

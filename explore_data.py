@@ -1,8 +1,9 @@
 """Quick data exploration script for Morgan Bowl."""
+
 import duckdb
 
 # Connect to the database
-con = duckdb.connect('data/warehouse.duckdb')
+con = duckdb.connect("data/warehouse.duckdb")
 
 print("=" * 80)
 print("MORGAN BOWL 4.0 - DATA EXPLORATION")
@@ -18,10 +19,12 @@ print(f"Name: {league[1]}")
 # Users
 print("\n👥 USERS")
 print("-" * 80)
-users = con.execute("""
-    SELECT * FROM staging.users 
+users = con.execute(
+    """
+    SELECT * FROM staging.users
     ORDER BY display_name
-""").fetchall()
+"""
+).fetchall()
 print(f"Total users: {len(users)}")
 for user in users:
     print(f"  - {user[1]} (ID: {user[0]})")
@@ -29,8 +32,9 @@ for user in users:
 # Rosters
 print("\n🏈 ROSTERS")
 print("-" * 80)
-rosters = con.execute("""
-    SELECT 
+rosters = con.execute(
+    """
+    SELECT
         r.roster_id,
         r.owner_id,
         u.display_name,
@@ -38,7 +42,8 @@ rosters = con.execute("""
     FROM staging.rosters r
     LEFT JOIN staging.users u ON r.owner_id = u.user_id
     ORDER BY u.display_name
-""").fetchall()
+"""
+).fetchall()
 print(f"Total rosters: {len(rosters)}")
 print("\n{:<10} {:<20} {:<15}".format("Roster ID", "Owner", "# Players"))
 print("-" * 80)
@@ -49,7 +54,8 @@ for roster in rosters:
 # Calculate standings from matchups
 print("\n📈 CURRENT STANDINGS (Based on Week 1-6 Results)")
 print("-" * 80)
-standings = con.execute("""
+standings = con.execute(
+    """
     WITH all_matchups AS (
         SELECT roster_id, matchup_id, points, 1 as week FROM staging.matchups_week_01
         UNION ALL SELECT roster_id, matchup_id, points, 2 FROM staging.matchups_week_02
@@ -59,22 +65,22 @@ standings = con.execute("""
         UNION ALL SELECT roster_id, matchup_id, points, 6 FROM staging.matchups_week_06
     ),
     matchup_results AS (
-        SELECT 
+        SELECT
             m1.roster_id,
             m1.week,
             m1.points as my_points,
             m2.points as opp_points,
-            CASE 
+            CASE
                 WHEN m1.points > m2.points THEN 1
                 WHEN m1.points < m2.points THEN 0
                 ELSE 0.5
             END as win
         FROM all_matchups m1
-        JOIN all_matchups m2 ON m1.matchup_id = m2.matchup_id 
-            AND m1.week = m2.week 
+        JOIN all_matchups m2 ON m1.matchup_id = m2.matchup_id
+            AND m1.week = m2.week
             AND m1.roster_id != m2.roster_id
     )
-    SELECT 
+    SELECT
         u.display_name,
         SUM(win) as wins,
         6 - SUM(win) as losses,
@@ -85,19 +91,23 @@ standings = con.execute("""
     LEFT JOIN staging.users u ON r.owner_id = u.user_id
     GROUP BY u.display_name
     ORDER BY wins DESC, points_for DESC
-""").fetchall()
+"""
+).fetchall()
 
 print(f"{'Rank':<6} {'Owner':<20} {'Record':<10} {'Points For':<12} {'Avg/Week':<10}")
 print("-" * 80)
 for i, (display_name, wins, losses, points_for, avg_points) in enumerate(standings, 1):
     record = f"{int(wins)}-{int(losses)}"
-    print(f"{i:<6} {display_name:<20} {record:<10} {points_for:<12.2f} {avg_points:<10.2f}")
+    print(
+        f"{i:<6} {display_name:<20} {record:<10} {points_for:<12.2f} {avg_points:<10.2f}"
+    )
 
 # Week 6 Matchups (most recent)
 print("\n🏆 WEEK 6 MATCHUPS")
 print("-" * 80)
-matchups = con.execute("""
-    SELECT 
+matchups = con.execute(
+    """
+    SELECT
         m.matchup_id,
         m.roster_id,
         u.display_name,
@@ -106,7 +116,8 @@ matchups = con.execute("""
     LEFT JOIN staging.rosters r ON m.roster_id = r.roster_id
     LEFT JOIN staging.users u ON r.owner_id = u.user_id
     ORDER BY m.matchup_id, m.points DESC
-""").fetchall()
+"""
+).fetchall()
 
 current_matchup = None
 matchup_teams = []
@@ -138,7 +149,8 @@ if matchup_teams and len(matchup_teams) == 2:
 # Top Scorers
 print("\n🔥 TOP SCORERS (All Weeks)")
 print("-" * 80)
-top_scores = con.execute("""
+top_scores = con.execute(
+    """
     WITH all_matchups AS (
         SELECT roster_id, points, 1 as week FROM staging.matchups_week_01
         UNION ALL SELECT roster_id, points, 2 FROM staging.matchups_week_02
@@ -147,7 +159,7 @@ top_scores = con.execute("""
         UNION ALL SELECT roster_id, points, 5 FROM staging.matchups_week_05
         UNION ALL SELECT roster_id, points, 6 FROM staging.matchups_week_06
     )
-    SELECT 
+    SELECT
         u.display_name,
         m.week,
         ROUND(m.points, 2) as points
@@ -156,7 +168,8 @@ top_scores = con.execute("""
     LEFT JOIN staging.users u ON r.owner_id = u.user_id
     ORDER BY m.points DESC
     LIMIT 10
-""").fetchall()
+"""
+).fetchall()
 
 print(f"{'Rank':<6} {'Owner':<20} {'Week':<6} {'Points':<10}")
 print("-" * 80)
@@ -166,8 +179,9 @@ for i, (display_name, week, points) in enumerate(top_scores, 1):
 # Transactions Summary
 print("\n💰 TRANSACTION SUMMARY")
 print("-" * 80)
-tx_counts = con.execute("""
-    SELECT 
+tx_counts = con.execute(
+    """
+    SELECT
         1 as week, COUNT(*) as count FROM staging.transactions_week_01
     UNION ALL SELECT 2, COUNT(*) FROM staging.transactions_week_02
     UNION ALL SELECT 3, COUNT(*) FROM staging.transactions_week_03
@@ -175,7 +189,8 @@ tx_counts = con.execute("""
     UNION ALL SELECT 5, COUNT(*) FROM staging.transactions_week_05
     UNION ALL SELECT 6, COUNT(*) FROM staging.transactions_week_06
     ORDER BY week
-""").fetchall()
+"""
+).fetchall()
 
 print(f"{'Week':<10} {'Transactions':<15}")
 print("-" * 80)
@@ -188,7 +203,9 @@ print(f"{'Total':<10} {total:<15}")
 
 print("\n" + "=" * 80)
 print("💡 TIP: Use DuckDB CLI for custom queries:")
-print("   poetry run python -c \"import duckdb; duckdb.connect('data/warehouse.duckdb').execute('.shell')\"")
+print(
+    "   poetry run python -c \"import duckdb; duckdb.connect('data/warehouse.duckdb').execute('.shell')\""
+)
 print("=" * 80)
 
 con.close()

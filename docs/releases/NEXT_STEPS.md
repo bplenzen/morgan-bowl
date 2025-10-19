@@ -2,11 +2,13 @@
 
 ## ✅ What You Have Now
 
-**Environment**: Python 3.11.9, all dependencies installed  
+**Environment**: Python 3.11.9, all dependencies installed
 **Data**: 2025 season, weeks 1-6 in DuckDB (`data/warehouse.duckdb`)
+
 - 12 users, 12 rosters, 72 matchups, 159 transactions
 
 **Tables in `staging` schema**:
+
 ```
 league
 users
@@ -44,7 +46,7 @@ Transform raw data into analytics-ready tables:
 
 1. **Staging models** (clean/standardize raw data):
    - `stg_league.sql`
-   - `stg_users.sql` 
+   - `stg_users.sql`
    - `stg_rosters.sql`
    - `stg_matchups.sql` (union all weeks)
 
@@ -76,6 +78,7 @@ Write a quick Python script to answer questions:
 ### Option 4: Automate Weekly Updates (1 hour)
 
 Set up scheduled ingestion:
+
 - Create a simple cron job or GitHub Action
 - Run ingestion every Tuesday morning
 - Keep data fresh automatically
@@ -87,6 +90,7 @@ Set up scheduled ingestion:
 ## 🤔 My Recommendation
 
 **Start with Option 3** - write a simple analytics script. Why?
+
 1. You'll understand your data better
 2. It's immediately satisfying (see results now!)
 3. You'll know what questions to answer with DBT later
