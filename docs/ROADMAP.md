@@ -14,33 +14,49 @@
 
 ---
 
-## 🚀 Version 1.1.0 - Advanced Analytics (NEXT RELEASE)
+## ✅ Version 1.1.0 - Universal League Configuration (RELEASED 2025-10-19)
+
+**All items completed! See [RELEASE_1.1.0.md](releases/RELEASE_1.1.0.md) for details.**
 
 ### Configuration & Portability
 
-**1. Universal League Configuration** 🌍 **[HIGH PRIORITY]**
-   - **Goal**: Make Morgan Bowl work for ANY Sleeper league with just a league ID
-   - **Current State**: Already has `SLEEPER_LEAGUE_ID` env var, league_size/playoff_teams in DBT vars
-   - **Needed Changes**:
-     - Create comprehensive `league_config.yml` for league-specific settings
-     - Add validation to ensure config matches actual league (12 teams = 12 teams)
-     - Auto-detect league settings from Sleeper API where possible:
-       - Total teams (roster count)
-       - Playoff teams (from league settings)
-       - Scoring type (PPR, Half-PPR, Standard)
-       - Regular season weeks (from league settings)
-     - Update README with "Quick Start: Any League" instructions
-   - **Files to modify**:
-     - `src/ingestion/config.py` - Expand config class
-     - `src/ingestion/pipeline.py` - Fetch league settings from API
-     - `dbt/dbt_project.yml` - Auto-populate vars from ingested data
-     - `README.md` - Add "Use in Your League" section
-   - **Future Enhancement**: ESPN & Yahoo league import (v2.0+)
+**1. Universal League Configuration** 🌍 ✅ **[COMPLETED]**
+   - ✅ Make Morgan Bowl work for ANY Sleeper league with just a league ID
+   - ✅ Expanded League model to fetch extended settings from Sleeper API
+   - ✅ Auto-detect league configuration:
+     - Total teams (roster count)
+     - Playoff teams (from league settings)
+     - Playoff week start
+     - Season year
+     - Scoring settings (PPR, Half-PPR, Standard)
+   - ✅ Created configuration validator:
+     - Compares ingested values with dbt_project.yml vars
+     - Logs helpful warnings if mismatches detected
+     - Returns validation results in ingestion summary
+   - ✅ Updated DBT models to use auto-detected metadata:
+     - `fct_justice_record` now uses `stg_league` table
+     - COALESCE fallback to DBT vars for backwards compatibility
+   - ✅ Added comprehensive documentation:
+     - "🌍 Use With ANY Sleeper League" section in README
+     - Instructions for finding league ID
+     - Configuration examples for different league sizes
+   - ✅ Added 13 new tests (all passing):
+     - League.model_validate() tests
+     - Configuration validator tests
+     - Total: 38 ingestion tests, 28 DBT tests
    - **Impact**: VERY HIGH - Makes project usable by anyone
-   - **Complexity**: Medium (4-6 hours)
-   - **Effort**: One-time setup, huge reusability benefit
+   - **Files Modified**:
+     - `src/ingestion/models.py` - Expanded League model with 9 new fields
+     - `src/ingestion/pipeline.py` - Added validate_league_configuration()
+     - `dbt/models/staging/stg_league.sql` - Exposed new config fields
+     - `dbt/models/marts/fct_justice_record.sql` - Uses league metadata
+     - `README.md` - Added comprehensive usage guide
+     - `tests/ingestion/test_models.py` - 5 new League tests
+     - `tests/ingestion/test_pipeline.py` - 8 new validator tests
 
-### Player Analytics & Insights
+---
+
+## 🚀 Version 1.2.0 - Advanced Analytics (NEXT RELEASE)
 
 6. **Strength of Schedule Analysis** 📊
 
