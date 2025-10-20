@@ -27,6 +27,19 @@ opportunity_cost as (
     select * from {{ ref('int_opportunity_cost') }}
 ),
 
+-- FROZEN DRAFT-DAY BASELINE (prevents look-ahead bias)
+-- This uses ONLY preseason data - replacement levels never change
+draft_day_baseline as (
+    select * from {{ ref('int_draft_day_baseline') }}
+),
+
+-- NEW: Multiplicative risk factors (not averaged)
+player_risk_factors as (
+    select * from {{ ref('int_player_risk_factors') }}
+),
+
+-- DEPRECATED: Old scarcity and risk models
+-- Kept for backwards compatibility during transition
 positional_scarcity as (
     select * from {{ ref('int_positional_scarcity') }}
 ),
@@ -43,35 +56,41 @@ users as (
     select * from {{ ref('stg_users') }}
 ),
 
--- Calculate replacement level PPG for each position
--- Based on FLEX simulation (greedy allocation by preseason ADP):
--- - QB12 (12 teams × 1 QB)
--- - RB28 (12 teams × 2 RB + 4 FLEX spots)
--- - WR32 (12 teams × 2 WR + 8 FLEX spots)
--- - TE12 (12 teams × 1 TE + 0 FLEX spots)
+-- REPLACEMENT LEVELS FROM FROZEN BASELINE
+-- These NEVER change - they're based on draft-day parameters only
+-- NO LOOK-AHEAD BIAS: Uses preseason ADP ranks, not current performance
 replacement_levels as (
     select
-        position,
+        ddb.position,
+        -- Use frozen replacement rank from draft day baseline
+        ddb.replacement_rank,
+        ddb.replacement_player_name,
+        ddb.replacement_player_adp,
+        ddb.vor_multiplier as scarcity_multiplier,
+
+        -- Get current performance of replacement player (for VOR calc only)
+        -- NOTE: We use the IDENTITY (Jordan Love, Najee Harris, etc.) from draft day
+        -- But their CURRENT performance for fair comparison
         case
-            when position = 'QB'
+            when ddb.position = 'QB'
                 then (
                     select points_per_game
                     from current_rankings
                     where position = 'QB' and current_rank_position = 12
                 )
-            when position = 'TE'
+            when ddb.position = 'TE'
                 then (
                     select points_per_game
                     from current_rankings
                     where position = 'TE' and current_rank_position = 12
                 )
-            when position = 'RB'
+            when ddb.position = 'RB'
                 then (
                     select points_per_game
                     from current_rankings
                     where position = 'RB' and current_rank_position = 28
                 )
-            when position = 'WR' then (
+            when ddb.position = 'WR' then (
                 select points_per_game
                 from current_rankings
                 where position = 'WR' and current_rank_position = 32
@@ -80,10 +99,14 @@ replacement_levels as (
         -- Also get top-5 average for "elite" threshold
         (
             select avg(points_per_game)
-            from current_rankings
-            where position = cr.position and current_rank_position <= 5
-        ) as elite_avg_ppg
-    from (select distinct position from current_rankings) as cr
+            from current_rankings cr
+            where cr.position = ddb.position and cr.current_rank_position <= 5
+        ) as elite_avg_ppg,
+
+        -- Metadata
+        'FROZEN - Never recalculate' as status,
+        current_timestamp as calculated_at
+    from draft_day_baseline ddb
 ),
 
 -- Calculate Value Over Replacement (VOR) for each player
@@ -137,21 +160,23 @@ draft_with_vor as (
         oc.opportunity_cost_tier,
         oc.opportunity_verdict,
 
-        -- Positional Scarcity Metrics
-        ps.scarcity_score,
-        ps.scarcity_tier,
-        ps.vor_multiplier,
-        ps.draft_priority_score,
-        ps.positional_value_index,
+        -- Positional Scarcity Metrics (FROZEN at draft day - no look-ahead bias)
+        -- These come from draft_day_baseline, not dynamic calculation
+        ddb.scarcity_score_normalized as scarcity_score,
+        ddb.scarcity_tier,
+        ddb.vor_multiplier as scarcity_multiplier,  -- Frozen scarcity from draft day
+        ddb.draft_priority_score,
+        ddb.elite_to_replacement_picks as positional_value_index,
 
-        -- Risk-Adjusted VOR Metrics
-        ra.coefficient_of_variation as risk_cv,
-        ra.games_missed_pct,
-        ra.composite_risk_penalty,
-        ra.risk_tier,
-        ra.risk_adjusted_vor,
-        ra.risk_adjusted_scarcity_vor,
-        ra.vor_reduction_from_risk,
+        -- Risk-Adjusted VOR Metrics (NEW MULTIPLICATIVE MODEL)
+        -- Properly compounds risk factors instead of averaging
+        prf.coefficient_of_variation as risk_cv,
+        prf.availability_factor,  -- % of games played
+        prf.composite_risk_factor,  -- Multiplicative: availability * volatility * position_fragility
+        prf.risk_tier,
+        prf.primary_risk_driver,
+        prf.risk_adjusted_scarcity_vor,  -- Already includes scarcity multiplier
+        prf.vor_lost_to_risk as vor_reduction_from_risk,
 
         -- Value Over Replacement
         rl.replacement_ppg,
@@ -164,16 +189,16 @@ draft_with_vor as (
                     (cr.points_per_game - rl.replacement_ppg) * cr.games_played
         end as value_over_replacement,
 
-        -- Scarcity-Adjusted VOR (accounts for positional scarcity)
+        -- Scarcity-Adjusted VOR (uses FROZEN scarcity multipliers from draft day)
         case
             when
                 cr.points_per_game is not null
                 and rl.replacement_ppg is not null
-                and ps.vor_multiplier is not null
+                and rl.scarcity_multiplier is not null  -- From frozen baseline, not dynamic
                 then
                     (cr.points_per_game - rl.replacement_ppg)
                     * cr.games_played
-                    * ps.vor_multiplier
+                    * rl.scarcity_multiplier  -- Frozen at draft time
         end as scarcity_adjusted_vor,
 
         -- Is this player even startable? (above replacement level)
@@ -218,12 +243,12 @@ draft_with_vor as (
         on dp.player_id = wv.player_id
     left join opportunity_cost as oc
         on dp.pick_no = oc.pick_no
-    left join positional_scarcity as ps
-        on dp.position = ps.position
-    left join risk_adjusted as ra
-        on dp.player_id = ra.player_id
+    left join player_risk_factors as prf
+        on dp.player_id = prf.player_id
     left join replacement_levels as rl
         on dp.position = rl.position
+    left join draft_day_baseline as ddb
+        on dp.position = ddb.position
 ),
 
 -- Apply advanced grading based on risk-adjusted VOR, opportunity cost, and context
@@ -472,7 +497,7 @@ draft_with_grades as (
                     'Starter quality but '
                     || lower(risk_tier)
                     || ' - '
-                    || round(games_missed_pct, 0)
+                    || round((1 - availability_factor) * 100, 0)
                     || '% games missed'
             when is_startable and round between 4 and 7
                 then

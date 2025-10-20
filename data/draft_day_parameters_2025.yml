@@ -1,0 +1,121 @@
+# Draft Day Parameters - 2025 Season
+# FROZEN at draft time to prevent look-ahead bias
+# These parameters must NEVER change once the draft is complete
+
+draft_date: "2025-09-04"  # Actual draft date
+season: 2025
+league_size: 12
+
+# Projection Source
+# Using preseason ADP as proxy for expert consensus projections
+# ADP incorporates FantasyPros, ESPN, Yahoo, and other expert rankings
+projection_source: "Preseason_ADP_Consensus_2025"
+projection_date: "2025-08-31"  # Week before draft
+projection_notes: |
+  ADP (Average Draft Position) serves as our projection baseline because:
+  1. It aggregates expert consensus from FantasyPros, ESPN, 4for4, etc.
+  2. It reflects draft-day market sentiment about expected value
+  3. It's the actual information available to drafters on draft day
+  4. Historical research shows ADP is highly correlated with expert PPG projections
+
+# Replacement Levels (FLEX simulation based on preseason ADP)
+# These are FROZEN - calculated once using preseason rankings only
+# FLEX allocation: Greedy algorithm sorting by ADP (best available players first)
+# Results: 4 of 12 FLEX spots → RB, 8 of 12 FLEX spots → WR, 0 → TE
+replacement_levels:
+  QB:
+    rank: 12  # 12 teams × 1 QB
+    player_name: "Jordan Love"
+    player_id: "6790"
+    preseason_adp: 96.0
+    notes: "QB12 by preseason ADP"
+
+  RB:
+    rank: 28  # 12 teams × (2 RB + 0.33 FLEX)
+    player_name: "Najee Harris"
+    player_id: "7528"
+    preseason_adp: 89.0
+    notes: "RB28 by preseason ADP - 4 FLEX spots allocated to RB"
+
+  WR:
+    rank: 32  # 12 teams × (2 WR + 0.67 FLEX)
+    player_name: "Jordan Addison"
+    player_id: "9488"
+    preseason_adp: 104.0
+    notes: "WR32 by preseason ADP - 8 FLEX spots allocated to WR"
+
+  TE:
+    rank: 12  # 12 teams × 1 TE
+    player_name: "Cole Kmet"
+    player_id: "7039"
+    preseason_adp: 144.0
+    notes: "TE12 by preseason ADP - 0 FLEX spots to TE in PPR"
+
+# Positional Scarcity Multipliers
+# Based on preseason expert consensus rankings (from seeds file)
+# Calculated using elite-to-replacement drop-off
+scarcity_multipliers:
+  TE: 1.30  # Most scarce (TE1 to TE12 biggest drop)
+  RB: 1.20  # Very scarce (RB1 to RB28 steep drop)
+  WR: 1.05  # Moderate (WR1 to WR32 gradual drop)
+  QB: 1.00  # Baseline (QB1 to QB12 smallest drop)
+
+# Risk Model Parameters
+# Multiplicative model: Risk Factor = Availability × Volatility × Position Prior
+risk_priors:
+  QB:
+    availability_baseline: 0.95  # QBs play most games
+    volatility_baseline: 0.95    # Most consistent week-to-week
+    position_fragility: 1.00     # Least injury-prone
+    notes: "QBs are most durable and consistent"
+
+  RB:
+    availability_baseline: 0.80  # RBs miss more games
+    volatility_baseline: 0.85    # Less consistent scoring
+    position_fragility: 0.85     # Most injury-prone position
+    notes: "RBs have highest injury risk and volatility"
+
+  WR:
+    availability_baseline: 0.88  # Moderate injury rate
+    volatility_baseline: 0.90    # Moderate consistency
+    position_fragility: 0.95     # Moderate injury risk
+    notes: "WRs are moderately risky"
+
+  TE:
+    availability_baseline: 0.85  # Some injury risk
+    volatility_baseline: 0.88    # Moderate consistency
+    position_fragility: 0.90     # Moderate injury risk
+    notes: "TEs have moderate risk profile"
+
+# Methodology Notes
+methodology:
+  flex_simulation: |
+    FLEX slots allocated using greedy algorithm:
+    1. Sort all RB25-RB60 and WR25-WR60 by preseason ADP (ascending)
+    2. Take best 12 players regardless of position
+    3. Count how many are RB vs WR
+    4. Result: 4 RB, 8 WR fill FLEX spots in PPR format
+    5. This determines replacement ranks: RB28, WR32
+
+  why_adp_not_ppg: |
+    We use ADP instead of raw projected PPG because:
+    1. Sleeper API doesn't provide season-long preseason projections
+    2. ADP aggregates expert consensus from multiple sources
+    3. ADP was the actual information available on draft day
+    4. Research shows ADP correlates strongly with expert projections
+    5. This is methodologically sound - we're using draft-day information only
+
+  future_enhancement: |
+    In future seasons, could integrate FantasyPros API ($50/year) to get
+    actual preseason projected PPG. Would allow true projection-based
+    FLEX simulation. For now, ADP serves as a valid proxy.
+
+# Validation
+validation:
+  frozen_at: "2025-10-19T12:00:00Z"
+  sha256_seed_file: "PLACEHOLDER"  # TODO: Calculate hash of preseason_rankings_2025.csv
+  never_recalculate: true
+  notes: |
+    These parameters are FROZEN. Draft grades calculated using these
+    parameters should NEVER change when new weekly data is ingested.
+    If they do, there is a look-ahead bias bug.
