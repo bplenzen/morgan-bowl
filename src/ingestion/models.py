@@ -57,3 +57,17 @@ class Matchup(BaseModel):
 class Transaction(BaseModel):
     id: str = Field(..., alias="transaction_id")
     status: Optional[str] = None
+
+
+class DraftPick(BaseModel):
+    """Represents a single draft pick from Sleeper."""
+
+    draft_id: str
+    player_id: str
+    picked_by: str  # User ID who made the pick
+    roster_id: int  # Team that owns the pick
+    round: int
+    draft_slot: int  # Position in snake draft (1-12, etc.)
+    pick_no: int  # Overall pick number (1-168, etc.)
+    is_keeper: Optional[bool] = None
+    metadata: Optional[dict[str, Any]] = None  # Player metadata from Sleeper

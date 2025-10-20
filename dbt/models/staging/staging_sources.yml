@@ -35,3 +35,17 @@ sources:
         description: "Week 5 transactions (waivers/trades)."
       - name: transactions_week_06
         description: "Week 6 transactions (waivers/trades)."
+      - name: draft_picks
+        description: "Draft picks with player_id, roster_id, round, pick_no."
+      - name: player_stats_week_01
+        description: "Week 1 player statistics from Sleeper."
+      - name: player_stats_week_02
+        description: "Week 2 player statistics from Sleeper."
+      - name: player_stats_week_03
+        description: "Week 3 player statistics from Sleeper."
+      - name: player_stats_week_04
+        description: "Week 4 player statistics from Sleeper."
+      - name: player_stats_week_05
+        description: "Week 5 player statistics from Sleeper."
+      - name: player_stats_week_06
+        description: "Week 6 player statistics from Sleeper."

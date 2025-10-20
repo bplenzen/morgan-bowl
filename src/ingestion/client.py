@@ -5,7 +5,7 @@ from typing import Any
 
 import httpx
 
-from ingestion.models import League, Matchup, Roster, Transaction, User
+from ingestion.models import DraftPick, League, Matchup, Roster, Transaction, User
 
 DEFAULT_BASE_URL = "https://api.sleeper.app/v1"
 DEFAULT_TIMEOUT = 10.0
@@ -47,6 +47,37 @@ class SleeperClient:
     def get_transactions(self, league_id: str, *, week: int) -> list[Transaction]:
         payload = self._get(f"/league/{league_id}/transactions/{week}")
         return [Transaction.model_validate(item) for item in payload]
+
+    def get_drafts(self, league_id: str) -> list[dict[str, Any]]:
+        """Get all drafts for a league.
+
+        Returns list of draft metadata. Use draft_id to fetch picks.
+        """
+        return self._get(f"/league/{league_id}/drafts")
+
+    def get_draft_picks(self, draft_id: str) -> list[DraftPick]:
+        """Get all picks for a specific draft.
+
+        Args:
+            draft_id: The draft identifier from get_drafts()
+
+        Returns:
+            List of DraftPick objects
+        """
+        payload = self._get(f"/draft/{draft_id}/picks")
+        return [DraftPick.model_validate(item) for item in payload]
+
+    def get_player_stats(self, season: int, week: int) -> dict[str, dict[str, Any]]:
+        """Get player stats for a specific week.
+
+        Args:
+            season: Season year (e.g., 2025)
+            week: Week number (1-18)
+
+        Returns:
+            Dict mapping player_id to stats dict with pts_ppr, gp, etc.
+        """
+        return self._get(f"/stats/nfl/regular/{season}/{week}")
 
     def _get(self, url: str) -> Any:
         return self._request("GET", url)
