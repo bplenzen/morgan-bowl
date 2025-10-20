@@ -1,0 +1,11 @@
+id,severity,category,item,status,commit,notes
+001,HIGH,Dead_Code,fct_justice_record + load_justice_record(),PENDING,,
+002,HIGH,Dependencies,Missing psycopg2-binary,COMPLETED,,psycopg2-binary already present in dependencies
+003,MEDIUM,Config,Hardcoded path in transfer_to_postgres,PENDING,,
+004,LOW,Data,SHA256 placeholder,PENDING,,
+005,MEDIUM,Data,Magic numbers in dbt,PENDING,,
+006,MEDIUM,Dependencies,Streamlit in dev deps,COMPLETED,,streamlit/plotly/pandas already in main dependencies
+007,LOW,Config,Default season=2025,PENDING,,
+008,LOW,Security,DuckDB not read-only,PENDING,,
+009,MEDIUM,Testing,No tests for scripts,PENDING,,
+010,LOW,Dead_Code,Deprecated test assert_justice,PENDING,,
