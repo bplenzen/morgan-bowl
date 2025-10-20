@@ -4,11 +4,42 @@
 
 - **Streamlit Cloud** only deploys from GitHub (not GitLab)
 - **GitLab CI/CD** runs our data ingestion pipeline
-- **Solution**: Auto-mirror all GitLab commits to GitHub
+- **Data updates** need to be committed and pushed to both repos
+- **Solution**: Auto-commit data updates and mirror everything to GitHub
 
 ## Setup Instructions
 
-### Step 1: Generate SSH Deploy Key
+### Step 1: Create GitLab Project Access Token
+
+The CI/CD pipeline needs permission to push commits back to the GitLab repository.
+
+1. Go to GitLab: <https://gitlab.com/bplenzen/morgan-bowl/-/settings/access_tokens>
+
+2. Click **"Add new token"**
+
+   - **Token name**: `CI/CD Pipeline Push Access`
+   - **Expiration date**: Set to 1 year from now (or longer)
+   - **Select scopes**:
+     - ✅ **write_repository** (REQUIRED - allows pushing commits)
+     - ✅ **read_repository** (optional, for completeness)
+   - Click **"Create project access token"**
+
+3. **IMPORTANT**: Copy the token immediately! You won't see it again.
+
+4. Go to: <https://gitlab.com/bplenzen/morgan-bowl/-/settings/ci_cd>
+
+5. Expand **"Variables"** section
+
+6. Click **"Add variable"**
+   - **Key**: `GITLAB_PUSH_TOKEN`
+   - **Value**: Paste the access token you just created
+   - **Type**: Variable
+   - **Environment scope**: All
+   - ✅ **Check "Mask variable"** (CRITICAL!)
+   - ❌ **Uncheck "Protect variable"**
+   - Click **"Add variable"**
+
+### Step 2: Generate SSH Deploy Key for GitHub
 
 On your local machine, generate a new SSH key specifically for GitLab→GitHub mirroring:
 
@@ -18,7 +49,7 @@ ssh-keygen -t ed25519 -C "gitlab-ci@morgan-bowl" -f ~/.ssh/gitlab_to_github_mirr
 
 **Important**: Leave the passphrase empty (press Enter twice)
 
-### Step 2: Add Public Key to GitHub
+### Step 3: Add Public Key to GitHub
 
 1. Copy the **public key**:
 
@@ -34,7 +65,7 @@ ssh-keygen -t ed25519 -C "gitlab-ci@morgan-bowl" -f ~/.ssh/gitlab_to_github_mirr
    - ✅ **Check "Allow write access"** (CRITICAL!)
    - Click **"Add key"**
 
-### Step 3: Add Private Key to GitLab
+### Step 4: Add Private Key to GitLab
 
 1. Encode the **private key** to base64:
 
@@ -58,7 +89,7 @@ ssh-keygen -t ed25519 -C "gitlab-ci@morgan-bowl" -f ~/.ssh/gitlab_to_github_mirr
    - ❌ **Uncheck "Protect variable"** (unless you only push to protected branches)
    - Click **"Add variable"**
 
-### Step 4: Test the Pipeline
+### Step 5: Test the Pipeline
 
 Push a test commit to GitLab:
 
@@ -71,7 +102,7 @@ Watch the pipeline at: <https://gitlab.com/bplenzen/morgan-bowl/-/pipelines>
 
 The `mirror:github` job should run and push to GitHub automatically.
 
-### Step 5: Verify Mirroring
+### Step 6: Verify Mirroring
 
 Check that the commit appears on GitHub:
 
@@ -84,11 +115,23 @@ Should show your latest commit.
 
 ## How It Works
 
-1. You push to GitLab (your primary remote): `git push`
+### For Code Changes
+
+1. You push code to GitLab: `git push`
 2. GitLab CI/CD runs the `mirror:github` job
 3. The job uses the SSH deploy key to push to GitHub
 4. GitHub receives the update
 5. Streamlit Cloud detects the GitHub push and auto-deploys
+
+### For Scheduled Data Ingestion
+
+1. GitLab scheduled pipeline runs weekly
+2. `ingest:weekly` job fetches data from Sleeper API and updates `data/warehouse.duckdb`
+3. `test:dbt` and `test:api_parity` jobs validate the data
+4. `commit:data` job commits the updated database with timestamp
+5. `mirror:github` job pushes everything to GitHub
+6. Streamlit Cloud deploys with fresh data
+7. **Fully automated - no manual intervention needed!**
 
 ## Workflow After Setup
 
