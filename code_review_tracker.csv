@@ -9,3 +9,5 @@ id,severity,category,item,status,commit,notes
 008,LOW,Security,DuckDB not read-only,PENDING,,
 009,MEDIUM,Testing,No tests for scripts,PENDING,,
 010,LOW,Dead_Code,Deprecated test assert_justice,PENDING,,
+013,MEDIUM,Dependencies,dbt version pinning with caret,COMPLETED,,dbt versions already using tilde operator
+014,LOW,Config,poetry.lock excluded from git,COMPLETED,,poetry.lock removed from .gitignore and committed

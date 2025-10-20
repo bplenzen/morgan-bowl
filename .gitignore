@@ -27,7 +27,7 @@ ENV/
 env/
 
 # Poetry
-poetry.lock
+# poetry.lock removed - committing for reproducible builds
 
 # Environment variables
 .env
