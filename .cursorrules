@@ -1,0 +1,75 @@
+# Morgan Bowl - AI Assistant Rules
+
+## Project Context
+
+Morgan Bowl is a fantasy football analytics platform that:
+- Ingests data from Sleeper API
+- Transforms data using DBT (SQL models)
+- Stores in DuckDB (embedded database)
+- Visualizes via Streamlit dashboard
+
+## Tech Stack
+
+- **Python 3.11**: Main language
+- **Poetry**: Dependency management
+- **DuckDB**: Embedded SQL database
+- **DBT**: SQL transformations
+- **Streamlit**: Dashboard framework
+- **Plotly**: Visualization library
+- **httpx + tenacity**: API client with retries
+- **Pydantic**: Data validation
+- **Pytest**: Testing framework
+
+## Code Style
+
+- **Python**: Follow PEP 8, use Black formatter, type hints preferred
+- **SQL**: Follow SQLFluff style, lowercase keywords, 4-space indentation
+- **Imports**: isort for Python, alphabetical for SQL
+- **Testing**: Write tests for new features, aim for 80%+ coverage
+
+## Project Structure
+
+```
+src/ingestion/     - Python data ingestion
+dbt/models/        - DBT SQL transformations
+  staging/         - Clean raw data
+  marts/           - Analytics tables
+analytics/         - Streamlit dashboard
+tests/             - Pytest tests
+scripts/           - Automation scripts
+```
+
+## Common Tasks
+
+### Add new analytics model
+1. Create SQL file in `dbt/models/marts/`
+2. Add schema in YAML file
+3. Add data tests
+4. Run `dbt run -s model_name`
+5. Update dashboard if needed
+
+### Add new API endpoint
+1. Update `src/ingestion/client.py`
+2. Add Pydantic model in `src/ingestion/models.py`
+3. Update pipeline in `src/ingestion/pipeline.py`
+4. Write tests
+
+### Fix DBT model
+1. Find model in `dbt/models/`
+2. Update SQL
+3. Run `dbt run -s model_name`
+4. Test with `dbt test -s model_name`
+
+## Important Notes
+
+- **DuckDB**: Use read-only connections in dashboard (`read_only=True`)
+- **SQL Injection**: Always use parameterized queries, never f-strings
+- **Testing**: Run `make test` before committing
+- **Docs**: Update README/CHANGELOG for user-facing changes
+
+## TODO (Configure Later)
+
+- Add specific coding patterns
+- Add common error solutions
+- Add league-specific context
+- Add LLM prompt templates
