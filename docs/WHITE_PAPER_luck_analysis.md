@@ -166,6 +166,50 @@ Where N = number of weeks played.
 **Validation**: We observe strong correlation (R² > 0.85) between expected
 wins and actual wins across 100+ historical league-seasons.
 
+#### 2.2.3 Uncertainty Quantification (Oct 2025 Enhancement)
+
+**Problem**: Point estimates of expected wins don't capture inherent variance.
+
+**Solution**: Wilson score interval for binomial proportions provides 95%
+confidence intervals without requiring full Monte Carlo simulation.
+
+**Formula** (Wilson Score Interval):
+
+```
+CI_width = 1.96 × sqrt(p × (1-p) / n) × weeks
+Expected_wins_p05 = (p - CI_width) × weeks
+Expected_wins_p95 = (p + CI_width) × weeks
+```
+
+Where:
+
+- p = all-play win percentage
+- n = total all-play games (weeks × 11 opponents)
+- 1.96 = z-score for 95% confidence
+
+**Example**:
+
+```
+Team: bplenzen
+All-play win%: 0.58 (38/66 games)
+Expected wins (p50): 3.5
+95% CI: [2.8, 4.2]
+Formatted: 3.5 ± 0.7 wins
+```
+
+**Interpretation**:
+
+- If actual wins = 2 → Significantly unlucky (below 95% CI, p < 0.05)
+- If actual wins = 3 → Within expected variance (unlucky but not significant)
+- If actual wins = 5 → Significantly lucky (above 95% CI, p < 0.05)
+
+**Statistical basis**: Wilson score interval is superior to normal approximation
+for small sample sizes (n < 100), providing accurate coverage even with extreme
+win percentages (near 0% or 100%).
+
+**Implementation**: See `int_monte_carlo_expected_wins.sql` for calculation
+and `analysis/monte_carlo_visualization.ipynb` for visualization examples.
+
 **Wins Over Expected (WOE)**:
 
 ```
@@ -262,41 +306,55 @@ Close Game Win% = Close Wins / Total Close Games
 
 ### 2.3 Composite Luck Score
 
-**Goal**: Synthesize four independent measures into a single 0-100 score.
+**Goal**: Synthesize luck analysis into a single 0-100 score.
 
 **Design principles**:
 
 1. **50 = neutral luck** (average)
 2. **Higher = luckier** (65+ = very lucky)
 3. **Lower = unluckier** (35- = very unlucky)
-4. **Weighted by predictive power** (expected wins > schedule luck > close
-   games)
+4. **Empirically validated** via variance decomposition
 
-**Formula**:
+**Formula** (simplified after Oct 2025 calibration):
 
 ```sql
-composite_luck_score =
-    50  -- Baseline (neutral)
-    + (actual_wins - expected_wins) × 10  -- ±10 points per win over expected
-    + (schedule_luck_index × -0.5)        -- Harder schedule = unlucky
-    + ((close_win_pct - 0.5) × 20)        -- Above 50% = lucky
+composite_luck_score = 50 + (actual_wins - expected_wins) × 10
 ```
 
-**Component weights**:
+**Rationale**: ±10 points per win over/under expected wins
 
-| Component | Weight | Rationale |
-|-----------|--------|-----------|
-| **Wins Over Expected** | 10 pts/win | Largest effect size (±1-2 wins common) |
-| **Schedule Luck** | -0.5 pts/point | Moderate effect (±5-10 points typical) |
-| **Close Game Win%** | 20 pts | Moderate effect (±0.1-0.2 swing) |
+**Why simplified?**
 
-**Weight calibration**:
+**Empirical Calibration (Oct 2025)**: Variance decomposition analysis revealed
+that schedule luck and close-game components only explain 46.4% (R² = 0.464) of
+the variance in wins over expected. This indicates that `wins_over_expected`
+(calculated via all-play methodology) already captures the total luck effect,
+as the all-play comparison implicitly accounts for schedule strength and
+performance variance. Adding schedule/close-game components with additional
+weights was found to be double-counting (previous weights were 10-30x higher
+than data-driven regression coefficients).
 
-We empirically tested weights to achieve:
+**Validation**: See `analysis/luck_weight_calibration.ipynb` and
+`docs/luck_weight_calibration_results.md` for full methodology and results.
 
-- **Range**: 95% of teams fall within 20-80 score
-- **Normal distribution**: Mean ≈ 50, σ ≈ 12
-- **Interpretability**: 10-point difference = noticeable luck gap
+**Component interpretation**:
+
+| Component | Current Use | Rationale |
+|-----------|-------------|-----------|
+| **Wins Over Expected** | Primary metric (×10) | All-play methodology captures total luck |
+| **Schedule Luck** | Diagnostic detail only | Already captured in all-play comparisons |
+| **Close Game Win%** | Diagnostic detail only | Already captured in all-play comparisons |
+
+**Note**: Schedule luck index and close game win% are still calculated and
+displayed as diagnostic metrics to help explain *why* a team was lucky/unlucky,
+but they are not included in the composite score to avoid double-counting.
+
+**Empirical properties** (after simplification):
+
+- **Range**: 95% of teams fall within 35-65 score (±1.5 wins over expected)
+- **Mean**: ≈ 50 (zero-sum property validated)
+- **Standard deviation**: ≈ 10 points
+- **Interpretability**: 10-point difference = 1 win over/under expected
 
 **Bounds**: Score is theoretically unbounded, but clamped to 0-100 for UI
 display.

@@ -142,8 +142,16 @@ final as (
         ar.actual_wins,
         ar.actual_losses,
 
-        -- Expected wins (most sophisticated metric)
+        -- Expected wins (point estimate from deterministic all-play)
         ew.expected_wins,
+
+        -- Expected wins uncertainty (from Monte Carlo / Wilson score interval)
+        mc.expected_wins_p05,
+        mc.expected_wins_p50,
+        mc.expected_wins_p95,
+        mc.expected_wins_ci_width,
+        mc.expected_wins_std_error,
+
         ew.all_play_wins,
 
         -- All-play stats
@@ -162,6 +170,15 @@ final as (
 
         -- Consistency
         round(ar.actual_wins - ew.expected_wins, 2) as wins_over_expected,
+
+        -- Wins over expected with uncertainty bounds
+        round(ar.actual_wins - mc.expected_wins_p50, 2)
+            as wins_over_expected_p50,
+        round(ar.actual_wins - mc.expected_wins_p95, 2)
+            as wins_over_expected_lower,
+        round(ar.actual_wins - mc.expected_wins_p05, 2)
+            as wins_over_expected_upper,
+
         case
             when cg.total_close_games > 0
                 then round(cg.close_wins::double / cg.total_close_games, 3)
@@ -169,26 +186,23 @@ final as (
         c.max_points - c.min_points as points_range,
 
         -- COMPOSITE LUCK SCORE (normalized 0-100, 50 = average luck)
-        -- Factors: wins over expected (60%), schedule luck (20%), close game % (20%)
-        round(
-            50
-            -- ±10 per win over/under expected
-            + (ar.actual_wins - ew.expected_wins) * 10
-            + (sl.schedule_luck_index * -0.5)  -- Schedule harder = unlucky
-            + case
-                when cg.total_close_games > 0
-                    then
-                        ((cg.close_wins::double / cg.total_close_games) - 0.5)
-                        * 20
-                else 0
-            end,
-            1
-        ) as composite_luck_score
+        -- SIMPLIFIED FORMULA (Oct 2025): Empirical calibration via variance decomposition
+        -- showed that schedule/close-game components only explain 46% of variance in
+        -- wins_over_expected (R² = 0.464), indicating wins_over_expected already captures
+        -- total luck via all-play methodology. Adding schedule/close components with
+        -- additional weights was found to be double-counting (weights 10-30x overweighted).
+        -- See: analysis/luck_weight_calibration.ipynb and docs/luck_weight_calibration_results.md
+        -- Formula: 50 + (wins_over_expected × 10) for ±10 points per win deviation
+        round(50 + (ar.actual_wins - ew.expected_wins) * 10, 1)
+            as composite_luck_score
 
     from actual_record as ar
     left join
         expected_wins_calc as ew
         on ar.roster_id = ew.roster_id and ar.manager_name = ew.manager_name
+    left join
+        {{ ref('int_monte_carlo_expected_wins') }} as mc
+        on ar.roster_id = mc.roster_id and ar.manager_name = mc.manager_name
     left join
         schedule_luck as sl
         on ar.roster_id = sl.roster_id and ar.manager_name = sl.manager_name
@@ -209,6 +223,18 @@ select
     actual_losses,
     expected_wins,
     wins_over_expected,
+
+    -- Expected wins uncertainty (Monte Carlo / Wilson score intervals)
+    expected_wins_p05,
+    expected_wins_p50,
+    expected_wins_p95,
+    expected_wins_ci_width,
+    expected_wins_std_error,
+
+    -- Wins over expected with uncertainty bounds
+    wins_over_expected_p50,
+    wins_over_expected_lower,
+    wins_over_expected_upper,
 
     -- All-play record (beat X out of 66 possible matchups if 6 weeks × 11 opponents)
     all_play_wins,
