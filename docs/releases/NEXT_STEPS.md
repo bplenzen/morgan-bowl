@@ -16,8 +16,10 @@
 
 ## 🗺️ v1.2.0 - Advanced Analytics
 
-- **Injury Impact Analysis** 🚑 - Track games/points missed, bad luck rankings
-- **Draft Performance Analysis** 📊 - Compare draft picks to current performance, assign grades
+- **Injury Impact Analysis** 🚑 - Track games/points missed, bad luck
+  rankings
+- **Draft Performance Analysis** 📊 - Compare draft picks to current
+  performance, assign grades
 
 ## 🚀 v1.3.0 - Platform Expansion
 
@@ -25,8 +27,11 @@
 
 ## 1.4.0
 
-- ** dedicated team home page with players, imported projections (i dont want to make my own projections)
+- ** dedicated team home page with players, imported projections (i dont
+  want to make my own projections)
 - ** matchup page
+- ** data science work, especially for luck analysis - white paper on what
+  we are doing, then ask experts then evaluate and change
 
 ## Future
 
