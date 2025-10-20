@@ -1,0 +1,188 @@
+# Morgan Bowl - GitHub Copilot Instructions
+
+## General Context
+
+This is the Morgan Bowl project - a fantasy football analytics platform that ingests data from the Sleeper API, processes it through DBT models in DuckDB, and displays insights via a Streamlit dashboard.
+
+**Tech Stack:**
+
+- Python 3.11 with Poetry for dependency management
+- DuckDB as the local analytical database
+- DBT (dbt-core and dbt-duckdb) for data transformation
+- Streamlit + Plotly for visualization
+- Sleeper API for fantasy football data
+- Pytest for testing
+
+**Project Structure:**
+
+- `morgan_bowl/` - Main Python package
+  - `ingestion/` - API clients and data ingestion
+  - `analytics/` - Analytics and calculations
+  - `app/` - Streamlit dashboard code
+- `dbt_morgan_bowl/` - DBT project with models
+  - `models/staging/` - Raw data staging models
+  - `models/intermediate/` - Business logic transformations
+  - `models/marts/` - Final analytics tables
+- `tests/` - Test suite
+- `data/` - Local DuckDB database files
+
+## Code Generation
+
+**Python Standards:**
+
+- Follow PEP 8 style guide
+- Use Black formatter (line length 88)
+- Always include type hints for function parameters and return types
+- Use Pydantic models for API response validation
+- Prefer descriptive variable names over abbreviations
+- Use context managers (`with` statements) for database connections
+- Add docstrings to all public functions and classes
+
+### CRITICAL: Never Assume Data or Insert Arbitrary Values
+
+- NEVER make up numeric values, thresholds, or constants
+- NEVER assume data distributions or statistical properties
+- NEVER insert placeholder numbers like 0, 1, 100, etc. without explicit user direction
+- If a value is needed, ask the user or mark it clearly as `# TODO: Define this value`
+- Always query actual data rather than assuming what it contains
+- Use `None` or raise exceptions rather than defaulting to made-up values
+
+**DuckDB Patterns:**
+
+- Always use read-only connections in the app: `duckdb.connect('database.db', read_only=True)`
+- Use parameterized queries to prevent SQL injection
+- Prefer CTE patterns over subqueries for readability
+- Close connections explicitly or use context managers
+
+**API Integration:**
+
+- Cache API responses where appropriate to reduce calls
+- Handle rate limiting gracefully with retries and exponential backoff
+- Log all API errors with context
+- Validate response schemas with Pydantic before processing
+
+**Error Handling:**
+
+- Use specific exception types, not bare `except`
+- Log errors with sufficient context for debugging
+- Provide user-friendly error messages in the Streamlit app
+- Never expose raw stack traces to end users
+
+## Code Review
+
+When reviewing code, check for:
+
+**Data Quality:**
+
+- Proper null handling in SQL transformations
+- Data type consistency across models
+- Unique constraints where expected
+- Foreign key relationships are valid
+- NO ASSUMED OR HARDCODED VALUES - all constants must be explicit and justified
+
+**Performance:**
+
+- Queries use appropriate indexes
+- No N+1 query patterns
+- Cached values are used where applicable
+- Large dataframes are filtered early
+
+**Security:**
+
+- No hardcoded credentials or API keys
+- SQL queries use parameterization
+- User inputs are validated
+- Sensitive data is not logged
+
+**DBT Best Practices:**
+
+- Models have proper materialization strategy
+- Schema tests are defined for key columns
+- Documentation exists for complex logic
+- Source freshness checks where applicable
+
+## Testing
+
+**Test Requirements:**
+
+- All new functions must have unit tests
+- API integrations need integration tests with mocked responses
+- DBT models should have schema tests (unique, not_null, relationships)
+- Streamlit components need visual regression tests where critical
+
+**Test Patterns:**
+
+- Use pytest fixtures for common setup
+- Mock external API calls with `responses` library
+- Use `pytest.parametrize` for multiple test cases
+- Create temporary DuckDB databases for integration tests
+- Name tests clearly: `test_<function>_<scenario>_<expected_result>`
+- Use real sample data in tests, not arbitrary values
+
+**Coverage:**
+
+- Aim for >80% code coverage
+- Focus on critical paths and edge cases
+- Don't just test happy paths
+
+## Common Tasks
+
+**Adding a New DBT Model:**
+
+1. Create SQL file in appropriate folder (staging/intermediate/marts)
+2. Add schema.yml with tests and documentation
+3. Run `dbt run -s <model_name>` to test
+4. Add to relevant exposures if used in dashboard
+
+**Adding a New API Endpoint:**
+
+1. Add method to appropriate client class in `ingestion/`
+2. Create Pydantic model for response validation
+3. Add error handling and logging
+4. Write unit tests with mocked responses
+5. Update ingestion scripts if needed
+
+**Fixing a DBT Model:**
+
+1. Check `dbt.log` for error details
+2. Test SQL in DuckDB CLI or DataGrip
+3. Verify upstream dependencies are materialized
+4. Run `dbt test -s <model_name>` after fix
+
+**Adding a Dashboard Feature:**
+
+1. Create new function in appropriate module under `app/`
+2. Use Streamlit caching decorators (@st.cache_data) for expensive operations
+3. Add error handling with user-friendly messages
+4. Test with different data scenarios
+
+## Important Notes
+
+**DuckDB Specifics:**
+
+- DuckDB connections must be read-only in the app to prevent corruption
+- Use `PRAGMA` commands to optimize query performance
+- DuckDB syntax differs slightly from PostgreSQL - check docs
+
+**Sleeper API:**
+
+- Rate limit is ~1000 requests/minute per IP
+- Some endpoints are cached on their side
+- League IDs and User IDs are required for most endpoints
+- Transaction and trade data requires specific league permissions
+
+**League Context:**
+
+- This is for the "Morgan Bowl" league on Sleeper
+- Track historical data across multiple seasons
+- Focus on long-term trends and analytics
+- Support multiple scoring formats if needed
+
+## Development Workflow
+
+- Use Poetry for dependency management: `poetry add <package>`
+- Run DBT models: `dbt run` or `dbt run -s <model>`
+- Run tests: `poetry run pytest`
+- Format code: `poetry run black .`
+- Type checking: `poetry run mypy morgan_bowl/`
+- Start dashboard: `poetry run streamlit run morgan_bowl/app/main.py`
