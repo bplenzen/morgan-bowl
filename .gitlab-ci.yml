@@ -6,6 +6,7 @@ stages:
   - ingest
   - build
   - test
+  - deploy
 
 # Global variables
 variables:
@@ -101,6 +102,25 @@ test:api_parity:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "web"
   allow_failure: false  # CRITICAL: Block pipeline if data doesn't match API
+
+# Job 5: Mirror to GitHub (for Streamlit Cloud deployment)
+# Streamlit Cloud only supports GitHub, so we auto-mirror all commits
+mirror:github:
+  stage: deploy
+  image: alpine/git:latest
+  script:
+    - echo "🔄 Mirroring to GitHub for Streamlit Cloud..."
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$GITHUB_DEPLOY_KEY" | base64 -d > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan github.com >> ~/.ssh/known_hosts
+    - git remote add github git@github.com:bplenzen/morgan-bowl.git || true
+    - git push github HEAD:main --force
+    - echo "✅ Successfully mirrored to GitHub"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  allow_failure: true  # Don't block pipeline if GitHub mirror fails
 
 # Optional: Manual trigger job (run anytime)
 ingest:manual:
