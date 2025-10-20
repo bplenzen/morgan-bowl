@@ -23,7 +23,6 @@ class TestDashboardHasErrorHandling:
         # Check that each load function has a try-except
         functions_to_check = [
             "def load_standings():",
-            "def load_justice_record():",
             "def load_weekly_performance():",
             "def load_advanced_luck():",
         ]
@@ -62,7 +61,6 @@ class TestDashboardHasErrorHandling:
 
         # Check that error messages are specific
         assert "Could not load standings" in dashboard_code
-        assert "Could not load justice record" in dashboard_code
         assert "Could not load weekly performance" in dashboard_code
         assert "Could not load advanced luck" in dashboard_code
 

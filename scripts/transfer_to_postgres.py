@@ -1,11 +1,15 @@
+import os
+from pathlib import Path
+
 import duckdb
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
+from ingestion.persistence import _validate_identifier
+
 # Connect to DuckDB
-duck = duckdb.connect(
-    "/Users/benlenzen/Codebase/morganbowl/data/processed/warehouse.duckdb"
-)
+db_path = Path(os.getenv("DUCKDB_PATH", "data/warehouse.duckdb"))
+duck = duckdb.connect(str(db_path), read_only=True)
 
 # Connect to PostgreSQL
 pg = psycopg2.connect(
@@ -28,6 +32,7 @@ tables = duck.execute(
 
 # Transfer each table
 for (table,) in tables:
+    _validate_identifier(table, "table name")
     print(f"Transferring table: {table}")
 
     # Get table data as CSV

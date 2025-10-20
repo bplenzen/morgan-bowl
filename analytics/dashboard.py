@@ -72,35 +72,6 @@ def load_standings():
 
 
 @st.cache_data
-def load_justice_record():
-    """Load justice record (luck analysis)
-
-    DEPRECATED: This function is kept for backward compatibility
-    but is no longer used in the dashboard UI (replaced by load_advanced_luck)
-    """
-    try:
-        conn = get_db_connection()
-        return conn.execute(
-            """
-            SELECT
-                manager_name,
-                actual_wins,
-                actual_losses,
-                justice_wins,
-                justice_losses,
-                luck_differential,
-                luck_status,
-                round(avg_points_per_week, 2) as avg_points_per_week
-            FROM main_analytics.fct_justice_record
-            ORDER BY luck_differential DESC
-        """
-        ).df()
-    except Exception as e:
-        st.error(f"⚠️ Could not load justice record: {str(e)}")
-        return pd.DataFrame()
-
-
-@st.cache_data
 def load_weekly_performance():
     """Load week-by-week performance"""
     try:
@@ -643,20 +614,12 @@ elif page == "🔥 Power Rankings":
     )
 
     standings_df = load_standings()
-    justice_df = load_justice_record()
 
-    # Combine for power ranking
-    power_df = standings_df.merge(
-        justice_df[["manager_name", "luck_differential", "avg_points_per_week"]],
-        on="manager_name",
-    )
-
-    # Simple power ranking: 40% win%, 40% points, 20% luck-adjusted
+    # Simple power ranking: 50% win%, 50% points
+    power_df = standings_df.copy()
     power_df["power_score"] = (
-        power_df["win_pct"] * 0.4
-        + (power_df["points_for"] / power_df["points_for"].max()) * 0.4
-        + ((power_df["luck_differential"] + 2) / 4)
-        * 0.2  # Normalize luck -2 to +2 -> 0 to 1
+        power_df["win_pct"] * 0.5
+        + (power_df["points_for"] / power_df["points_for"].max()) * 0.5
     )
 
     power_df = power_df.sort_values("power_score", ascending=False).reset_index(
@@ -672,8 +635,6 @@ elif page == "🔥 Power Rankings":
                 "wins",
                 "losses",
                 "points_for",
-                "avg_points_per_week",
-                "luck_differential",
                 "power_score",
             ]
         ],

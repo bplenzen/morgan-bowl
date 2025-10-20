@@ -30,6 +30,8 @@ models:
         description: "Wins divided by games played."
 
   - name: fct_justice_record
+    config:
+      enabled: false  # DEPRECATED Oct 2025 - disabled to save CI/CD time
     description: "⚠️ DEPRECATED (Oct 2025): Replaced by fct_advanced_luck. Justice record (median wins) vs actual record to measure luck. Teams scoring above the weekly median earn 'justice wins'. Kept for backward compatibility."
     meta:
       deprecated: true
