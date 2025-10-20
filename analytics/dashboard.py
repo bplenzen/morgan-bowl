@@ -159,6 +159,36 @@ def load_advanced_luck():
         return pd.DataFrame()
 
 
+@st.cache_data
+def load_draft_performance():
+    """Load draft analysis with grades and metrics"""
+    try:
+        conn = get_db_connection()
+        return conn.execute(
+            """
+            SELECT
+                pick_no,
+                round,
+                player_name,
+                position,
+                manager_name,
+                round(value_over_replacement, 1) as vor,
+                round(risk_adjusted_scarcity_vor, 1) as adj_vor,
+                pick_grade,
+                grade_score,
+                value_verdict,
+                consistency_tier,
+                risk_tier,
+                draft_day_opportunity_cost
+            FROM main_analytics.fct_draft_performance
+            ORDER BY pick_no
+        """
+        ).df()
+    except Exception as e:
+        st.error(f"⚠️ Could not load draft analysis: {str(e)}")
+        return pd.DataFrame()
+
+
 # Header
 st.title("🏈 Morgan Bowl Fantasy Football Analytics")
 st.markdown("*Data-driven insights for the most competitive fantasy league*")
@@ -176,6 +206,7 @@ with st.sidebar:
             "🤓 Luck Analysis",
             "📈 Weekly Performance",
             "🔥 Power Rankings",
+            "🎯 Draft Analysis",
         ],
     )
 
@@ -651,6 +682,182 @@ elif page == "🔥 Power Rankings":
             ),
         },
     )
+
+elif page == "🎯 Draft Analysis":
+    st.header("🎯 Draft Performance Analysis")
+
+    st.markdown(
+        """
+    **Comprehensive draft evaluation using:**
+    - 📈 Value Over Replacement (VOR) - how much better than replacement level
+    - 🎲 Risk-Adjusted Metrics - volatility + availability factored in
+    - 🎯 Positional Scarcity Adjustments - flex positions weighted appropriately
+    - 💰 Draft-Day Opportunity Cost - what you passed up at that pick
+    """
+    )
+
+    draft_df = load_draft_performance()
+
+    if draft_df.empty:
+        st.warning("No draft data available")
+    else:
+        # Manager filter
+        managers = ["All"] + sorted(draft_df["manager_name"].unique().tolist())
+        selected_manager = st.selectbox("Filter by Manager:", managers)
+
+        filtered_df = (
+            draft_df
+            if selected_manager == "All"
+            else draft_df[draft_df["manager_name"] == selected_manager]
+        )
+
+        # Grade distribution metrics
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            avg_grade = filtered_df["grade_score"].mean()
+            st.metric("Average Grade Score", f"{avg_grade:.1f}")
+        with col2:
+            a_grades = len(filtered_df[filtered_df["grade_score"] >= 90])
+            st.metric("A Grades", a_grades)
+        with col3:
+            f_grades = len(filtered_df[filtered_df["grade_score"] < 30])
+            st.metric("F Grades", f_grades)
+
+        # Draft picks table
+        st.subheader("All Draft Picks")
+        st.dataframe(
+            filtered_df[
+                [
+                    "pick_no",
+                    "round",
+                    "player_name",
+                    "position",
+                    "manager_name",
+                    "adj_vor",
+                    "pick_grade",
+                    "value_verdict",
+                ]
+            ],
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "pick_no": "Pick",
+                "round": "Rd",
+                "player_name": "Player",
+                "position": "Pos",
+                "manager_name": "Manager",
+                "adj_vor": st.column_config.NumberColumn("Adj VOR", format="%.1f"),
+                "pick_grade": "Grade",
+                "value_verdict": "Verdict",
+            },
+        )
+
+        # Best/Worst picks
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("🏆 Best Picks")
+            best = filtered_df.nlargest(5, "grade_score")
+            st.dataframe(
+                best[["player_name", "round", "pick_grade", "adj_vor"]],
+                hide_index=True,
+                column_config={
+                    "player_name": "Player",
+                    "round": "Round",
+                    "pick_grade": "Grade",
+                    "adj_vor": st.column_config.NumberColumn("Adj VOR", format="%.1f"),
+                },
+            )
+
+        with col2:
+            st.subheader("💔 Worst Picks")
+            worst = filtered_df.nsmallest(5, "grade_score")
+            st.dataframe(
+                worst[["player_name", "round", "pick_grade", "adj_vor"]],
+                hide_index=True,
+                column_config={
+                    "player_name": "Player",
+                    "round": "Round",
+                    "pick_grade": "Grade",
+                    "adj_vor": st.column_config.NumberColumn("Adj VOR", format="%.1f"),
+                },
+            )
+
+        # Grade distribution chart
+        st.subheader("Grade Distribution")
+        grade_counts = filtered_df["pick_grade"].str[:1].value_counts().sort_index()
+        fig = px.bar(
+            x=grade_counts.index,
+            y=grade_counts.values,
+            labels={"x": "Grade", "y": "Count"},
+            title="Draft Grades by Letter",
+            color=grade_counts.index,
+            color_discrete_map={
+                "A": "#2ecc71",
+                "B": "#a8e6cf",
+                "C": "#95a5a6",
+                "D": "#f39c12",
+                "F": "#e74c3c",
+            },
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Expandable detailed metrics
+        with st.expander("📊 Advanced Metrics Breakdown"):
+            st.markdown(
+                "**Risk Tiers**: How reliable is this player? (Elite/Stable/Moderate/Volatile)"
+            )
+            st.dataframe(
+                filtered_df[
+                    [
+                        "player_name",
+                        "position",
+                        "vor",
+                        "adj_vor",
+                        "consistency_tier",
+                        "risk_tier",
+                    ]
+                ],
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "player_name": "Player",
+                    "position": "Pos",
+                    "vor": st.column_config.NumberColumn("Raw VOR", format="%.1f"),
+                    "adj_vor": st.column_config.NumberColumn(
+                        "Risk-Adjusted VOR", format="%.1f"
+                    ),
+                    "consistency_tier": "Consistency",
+                    "risk_tier": "Risk",
+                },
+            )
+
+        with st.expander("💰 Opportunity Cost Analysis"):
+            st.markdown(
+                "**What did you pass up?** Shows the best available player at each draft position."
+            )
+            st.dataframe(
+                filtered_df[
+                    [
+                        "pick_no",
+                        "player_name",
+                        "adj_vor",
+                        "draft_day_opportunity_cost",
+                    ]
+                ],
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "pick_no": "Pick",
+                    "player_name": "Drafted",
+                    "adj_vor": st.column_config.NumberColumn("Your VOR", format="%.1f"),
+                    "draft_day_opportunity_cost": "Best Available (Passed)",
+                },
+            )
+
+        st.markdown("---")
+        st.markdown(
+            "*🎓 Methodology: Combines historical performance, consistency metrics, injury risk, and positional scarcity. See docs/DRAFT_ANALYSIS_METHODOLOGY.md for details.*"
+        )
 
 # Footer
 st.markdown("---")
