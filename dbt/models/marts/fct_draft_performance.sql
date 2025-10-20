@@ -27,6 +27,11 @@ opportunity_cost as (
     select * from {{ ref('int_opportunity_cost') }}
 ),
 
+-- NEW: Expected value by pick (pick-value curve)
+expected_value_by_pick as (
+    select * from {{ ref('int_expected_value_by_pick') }}
+),
+
 -- FROZEN DRAFT-DAY BASELINE (prevents look-ahead bias)
 -- This uses ONLY preseason data - replacement levels never change
 draft_day_baseline as (
@@ -178,6 +183,19 @@ draft_with_vor as (
         prf.risk_adjusted_scarcity_vor,  -- Already includes scarcity multiplier
         prf.vor_lost_to_risk as vor_reduction_from_risk,
 
+        -- UNCERTAINTY QUANTIFICATION: VOR confidence intervals
+        prf.risk_adjusted_vor_lower_bound,  -- Pessimistic scenario (-1 stddev)
+        prf.risk_adjusted_vor_upper_bound,  -- Optimistic scenario (+1 stddev)
+        prf.vor_uncertainty_range,          -- Width of confidence interval
+        prf.vor_coefficient_of_variation as vor_cv,  -- Relative uncertainty
+
+        -- PICK-VALUE CURVE: Expected VOR at this draft position
+        evp.expected_vor_at_pick,           -- What VOR was expected at this pick?
+        evp.expected_vor_p25,               -- 25th percentile expectation
+        evp.expected_vor_p75,               -- 75th percentile expectation
+        evp.expected_value_tier,            -- ELITE/HIGH_VALUE/etc tier for this pick
+        evp.position_recommendation,        -- Should this pick prioritize RB/WR/etc?
+
         -- Value Over Replacement
         rl.replacement_ppg,
         rl.elite_avg_ppg,
@@ -249,6 +267,8 @@ draft_with_vor as (
         on dp.position = rl.position
     left join draft_day_baseline as ddb
         on dp.position = ddb.position
+    left join expected_value_by_pick as evp
+        on dp.pick_no = evp.pick_no
 ),
 
 -- Apply advanced grading based on risk-adjusted VOR, opportunity cost, and context
@@ -423,6 +443,54 @@ draft_with_grades as (
                 -- Late rounds: Any positive VOR is good
                 least(100, greatest(0, 70 + risk_adjusted_scarcity_vor))
         end as grade_score,
+
+        -- GRADE SCORE CONFIDENCE INTERVAL (using VOR uncertainty)
+        -- Lower bound: pessimistic grade (if no uncertainty data, use point estimate)
+        case
+            when games_played = 0 or games_played is null then 0
+            when risk_adjusted_vor_lower_bound is null then
+                -- No uncertainty data - use the point estimate itself
+                case
+                    when risk_adjusted_scarcity_vor is null then 50
+                    when round <= 3
+                        then least(100, greatest(0, 50 + (risk_adjusted_scarcity_vor / 2)))
+                    when round between 4 and 7
+                        then least(100, greatest(0, 60 + (risk_adjusted_scarcity_vor / 1.5)))
+                    else least(100, greatest(0, 70 + risk_adjusted_scarcity_vor))
+                end
+            when round <= 3
+                then least(100, greatest(0, 50 + (risk_adjusted_vor_lower_bound / 2)))
+            when round between 4 and 7
+                then least(100, greatest(0, 60 + (risk_adjusted_vor_lower_bound / 1.5)))
+            else least(100, greatest(0, 70 + risk_adjusted_vor_lower_bound))
+        end as grade_score_lower_bound,
+
+        -- Upper bound: optimistic grade (if no uncertainty data, use point estimate)
+        case
+            when games_played = 0 or games_played is null then 0
+            when risk_adjusted_vor_upper_bound is null then
+                -- No uncertainty data - use the point estimate itself
+                case
+                    when risk_adjusted_scarcity_vor is null then 50
+                    when round <= 3
+                        then least(100, greatest(0, 50 + (risk_adjusted_scarcity_vor / 2)))
+                    when round between 4 and 7
+                        then least(100, greatest(0, 60 + (risk_adjusted_scarcity_vor / 1.5)))
+                    else least(100, greatest(0, 70 + risk_adjusted_scarcity_vor))
+                end
+            when round <= 3
+                then least(100, greatest(0, 50 + (risk_adjusted_vor_upper_bound / 2)))
+            when round between 4 and 7
+                then least(100, greatest(0, 60 + (risk_adjusted_vor_upper_bound / 1.5)))
+            else least(100, greatest(0, 70 + risk_adjusted_vor_upper_bound))
+        end as grade_score_upper_bound,
+
+        -- Grade uncertainty (width of confidence interval)
+        case
+            when vor_uncertainty_range is not null and vor_uncertainty_range > 0
+                then round(vor_uncertainty_range / 2.0, 1)  -- ±range around point estimate
+            else 0.0
+        end as grade_score_uncertainty,
 
         -- COMPREHENSIVE VALUE VERDICT: Explains the full story
         case

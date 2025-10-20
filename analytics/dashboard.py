@@ -161,7 +161,7 @@ def load_advanced_luck():
 
 @st.cache_data
 def load_draft_performance():
-    """Load draft analysis with grades and metrics"""
+    """Load draft analysis with grades and metrics (including NEW uncertainty quantification)"""
     try:
         conn = get_db_connection()
         return conn.execute(
@@ -174,12 +174,24 @@ def load_draft_performance():
                 manager_name,
                 round(value_over_replacement, 1) as vor,
                 round(risk_adjusted_scarcity_vor, 1) as adj_vor,
+                -- NEW: Uncertainty metrics
+                round(risk_adjusted_vor_lower_bound, 1) as vor_lower,
+                round(risk_adjusted_vor_upper_bound, 1) as vor_upper,
+                round(vor_uncertainty_range, 1) as vor_uncertainty,
+                round(grade_score_lower_bound, 1) as grade_lower,
+                round(grade_score_upper_bound, 1) as grade_upper,
+                round(grade_score_uncertainty, 1) as grade_uncertainty,
+                -- NEW: Pick-value curve metrics
+                round(expected_vor_at_pick, 1) as expected_vor,
+                expected_value_tier,
+                round(risk_adjusted_scarcity_vor - expected_vor_at_pick, 1) as value_vs_expected,
                 pick_grade,
                 grade_score,
                 value_verdict,
                 consistency_tier,
                 risk_tier,
-                draft_day_opportunity_cost
+                draft_day_opportunity_cost,
+                games_played
             FROM main_analytics.fct_draft_performance
             ORDER BY pick_no
         """
@@ -689,10 +701,12 @@ elif page == "🎯 Draft Analysis":
     st.markdown(
         """
     **Comprehensive draft evaluation using:**
-    - 📈 Value Over Replacement (VOR) - how much better than replacement level
+    - 📈 Value Over Replacement (VOR) **with confidence intervals**
     - 🎲 Risk-Adjusted Metrics - volatility + availability factored in
     - 🎯 Positional Scarcity Adjustments - flex positions weighted appropriately
     - 💰 Draft-Day Opportunity Cost - what you passed up at that pick
+    - 📊 **NEW: Uncertainty Quantification** - grade ranges show statistical confidence
+    - 📉 **NEW: Pick-Value Curve** - compare vs expected value at each pick
     """
     )
 
@@ -711,76 +725,377 @@ elif page == "🎯 Draft Analysis":
             else draft_df[draft_df["manager_name"] == selected_manager]
         )
 
-        # Grade distribution metrics
-        col1, col2, col3 = st.columns(3)
+        # Grade distribution metrics (ENHANCED with uncertainty)
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             avg_grade = filtered_df["grade_score"].mean()
-            st.metric("Average Grade Score", f"{avg_grade:.1f}")
+            avg_uncertainty = filtered_df["grade_uncertainty"].mean()
+            st.metric(
+                "Average Grade Score",
+                f"{avg_grade:.1f}",
+                delta=f"±{avg_uncertainty:.1f}" if pd.notna(avg_uncertainty) else None,
+                delta_color="off",
+            )
         with col2:
             a_grades = len(filtered_df[filtered_df["grade_score"] >= 90])
             st.metric("A Grades", a_grades)
         with col3:
             f_grades = len(filtered_df[filtered_df["grade_score"] < 30])
             st.metric("F Grades", f_grades)
+        with col4:
+            # NEW: Show steals vs reaches
+            steals = len(filtered_df[filtered_df["value_vs_expected"] > 20])
+            reaches = len(filtered_df[filtered_df["value_vs_expected"] < -20])
+            st.metric("Steals / Reaches", f"{steals} / {reaches}")
 
-        # Draft picks table
-        st.subheader("All Draft Picks")
-        st.dataframe(
-            filtered_df[
-                [
-                    "pick_no",
-                    "round",
-                    "player_name",
-                    "position",
-                    "manager_name",
-                    "adj_vor",
-                    "pick_grade",
-                    "value_verdict",
-                ]
-            ],
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "pick_no": "Pick",
-                "round": "Rd",
-                "player_name": "Player",
-                "position": "Pos",
-                "manager_name": "Manager",
-                "adj_vor": st.column_config.NumberColumn("Adj VOR", format="%.1f"),
-                "pick_grade": "Grade",
-                "value_verdict": "Verdict",
-            },
+        # NEW: Uncertainty visualization tabs
+        tab1, tab2, tab3 = st.tabs(
+            ["📋 Draft Board", "📊 Uncertainty Analysis", "📉 Value Curve"]
         )
 
-        # Best/Worst picks
-        col1, col2 = st.columns(2)
-        with col1:
-            st.subheader("🏆 Best Picks")
-            best = filtered_df.nlargest(5, "grade_score")
+        with tab1:
+            # Draft picks table (ENHANCED with uncertainty)
+            st.subheader("All Draft Picks")
+
+            # Add uncertainty toggle
+            show_uncertainty = st.checkbox("Show Confidence Intervals", value=True)
+
+            display_cols = [
+                "pick_no",
+                "round",
+                "player_name",
+                "position",
+                "manager_name",
+                "adj_vor",
+                "pick_grade",
+                "value_verdict",
+            ]
+
+            if show_uncertainty:
+                # Add uncertainty columns
+                display_cols.insert(6, "vor_uncertainty")
+                display_cols.insert(8, "grade_uncertainty")
+
             st.dataframe(
-                best[["player_name", "round", "pick_grade", "adj_vor"]],
+                filtered_df[display_cols],
+                use_container_width=True,
                 hide_index=True,
                 column_config={
+                    "pick_no": "Pick",
+                    "round": "Rd",
                     "player_name": "Player",
-                    "round": "Round",
-                    "pick_grade": "Grade",
+                    "position": "Pos",
+                    "manager_name": "Manager",
                     "adj_vor": st.column_config.NumberColumn("Adj VOR", format="%.1f"),
+                    "vor_uncertainty": st.column_config.NumberColumn(
+                        "VOR ±",
+                        format="%.1f",
+                        help="Uncertainty range (wider = more volatile)",
+                    ),
+                    "pick_grade": "Grade",
+                    "grade_uncertainty": st.column_config.NumberColumn(
+                        "Grade ±", format="%.1f", help="Grade uncertainty"
+                    ),
+                    "value_verdict": "Verdict",
                 },
             )
+
+            # Best/Worst picks
+            col1, col2 = st.columns(2)
+            with col1:
+                st.subheader("🏆 Best Picks")
+                best = filtered_df.nlargest(5, "grade_score")
+                st.dataframe(
+                    best[
+                        [
+                            "player_name",
+                            "round",
+                            "pick_grade",
+                            "adj_vor",
+                            "grade_uncertainty",
+                        ]
+                    ],
+                    hide_index=True,
+                    column_config={
+                        "player_name": "Player",
+                        "round": "Round",
+                        "pick_grade": "Grade",
+                        "adj_vor": st.column_config.NumberColumn(
+                            "Adj VOR", format="%.1f"
+                        ),
+                        "grade_uncertainty": st.column_config.NumberColumn(
+                            "±", format="%.1f"
+                        ),
+                    },
+                )
 
         with col2:
             st.subheader("💔 Worst Picks")
             worst = filtered_df.nsmallest(5, "grade_score")
             st.dataframe(
-                worst[["player_name", "round", "pick_grade", "adj_vor"]],
+                worst[
+                    [
+                        "player_name",
+                        "round",
+                        "pick_grade",
+                        "adj_vor",
+                        "grade_uncertainty",
+                    ]
+                ],
                 hide_index=True,
                 column_config={
                     "player_name": "Player",
                     "round": "Round",
                     "pick_grade": "Grade",
                     "adj_vor": st.column_config.NumberColumn("Adj VOR", format="%.1f"),
+                    "grade_uncertainty": st.column_config.NumberColumn(
+                        "±", format="%.1f"
+                    ),
                 },
             )
+
+        with tab2:
+            # NEW: Uncertainty Analysis Tab
+            st.subheader("📊 Confidence Interval Analysis")
+
+            st.markdown(
+                """
+            **Understanding Uncertainty:**
+            - **Wide confidence intervals** = High volatility, boom-or-bust player
+            - **Narrow confidence intervals** = Consistent, reliable floor
+            - Uncertainty decreases as season progresses (more data)
+            """
+            )
+
+            # Filter to players with uncertainty data (2+ games)
+            with_uncertainty = filtered_df[
+                filtered_df["vor_uncertainty"].notna()
+            ].copy()
+
+            if not with_uncertainty.empty:
+                # VOR confidence interval chart (top 30 picks)
+                top_picks = with_uncertainty[with_uncertainty["pick_no"] <= 30].copy()
+
+                if not top_picks.empty:
+                    fig = go.Figure()
+
+                    for _, row in top_picks.iterrows():
+                        # Error bar
+                        fig.add_trace(
+                            go.Scatter(
+                                x=[row["pick_no"]],
+                                y=[row["adj_vor"]],
+                                error_y=dict(
+                                    type="data",
+                                    symmetric=False,
+                                    array=(
+                                        [row["vor_upper"] - row["adj_vor"]]
+                                        if pd.notna(row["vor_upper"])
+                                        else [0]
+                                    ),
+                                    arrayminus=(
+                                        [row["adj_vor"] - row["vor_lower"]]
+                                        if pd.notna(row["vor_lower"])
+                                        else [0]
+                                    ),
+                                    color="lightblue",
+                                    thickness=2,
+                                    width=4,
+                                ),
+                                mode="markers",
+                                marker=dict(size=10, color="#448AFF"),
+                                name=row["player_name"],
+                                hovertemplate=f"<b>{row['player_name']}</b><br>"
+                                + f"Pick #{row['pick_no']}<br>"
+                                + f"VOR: {row['adj_vor']:.1f}<br>"
+                                + f"Range: {row['vor_lower']:.1f} - {row['vor_upper']:.1f}<br>"
+                                + f"Uncertainty: ±{row['vor_uncertainty']/2:.1f}<extra></extra>",
+                                showlegend=False,
+                            )
+                        )
+
+                    fig.update_layout(
+                        title="VOR Confidence Intervals (Top 30 Picks)",
+                        xaxis_title="Draft Pick Number",
+                        yaxis_title="Risk-Adjusted VOR",
+                        height=500,
+                        template="plotly_white",
+                        hovermode="closest",
+                    )
+
+                    st.plotly_chart(fig, use_container_width=True)
+
+                # Most/Least certain players
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.subheader("🎯 Most Certain (Narrow CI)")
+                    certain = with_uncertainty.nsmallest(5, "vor_uncertainty")
+                    st.dataframe(
+                        certain[
+                            [
+                                "player_name",
+                                "adj_vor",
+                                "vor_uncertainty",
+                                "consistency_tier",
+                            ]
+                        ],
+                        hide_index=True,
+                        column_config={
+                            "player_name": "Player",
+                            "adj_vor": st.column_config.NumberColumn(
+                                "VOR", format="%.1f"
+                            ),
+                            "vor_uncertainty": st.column_config.NumberColumn(
+                                "Uncertainty", format="%.1f"
+                            ),
+                            "consistency_tier": "Consistency",
+                        },
+                    )
+
+                with col2:
+                    st.subheader("🎲 Most Uncertain (Wide CI)")
+                    uncertain = with_uncertainty.nlargest(5, "vor_uncertainty")
+                    st.dataframe(
+                        uncertain[
+                            [
+                                "player_name",
+                                "adj_vor",
+                                "vor_uncertainty",
+                                "consistency_tier",
+                            ]
+                        ],
+                        hide_index=True,
+                        column_config={
+                            "player_name": "Player",
+                            "adj_vor": st.column_config.NumberColumn(
+                                "VOR", format="%.1f"
+                            ),
+                            "vor_uncertainty": st.column_config.NumberColumn(
+                                "Uncertainty", format="%.1f"
+                            ),
+                            "consistency_tier": "Consistency",
+                        },
+                    )
+            else:
+                st.info(
+                    "📊 Uncertainty data will appear after Week 2 (need 2+ games for variance calculations)"
+                )
+
+        with tab3:
+            # NEW: Pick-Value Curve Tab
+            st.subheader("📉 Pick-Value Curve Analysis")
+
+            st.markdown(
+                """
+            **Value vs Expected:**
+            - Shows how each pick performed vs expected value at that draft position
+            - **Positive = Steal** (got more value than expected)
+            - **Negative = Reach** (got less value than expected)
+            """
+            )
+
+            # Value vs Expected scatter plot
+            active_picks = filtered_df[filtered_df["games_played"] > 0].copy()
+
+            if not active_picks.empty and "value_vs_expected" in active_picks.columns:
+                fig = px.scatter(
+                    active_picks,
+                    x="expected_vor",
+                    y="adj_vor",
+                    color="position",
+                    hover_data=["player_name", "pick_no", "value_vs_expected"],
+                    title="Actual VOR vs Expected VOR (Picks Above Line = Outperformers)",
+                    labels={
+                        "expected_vor": "Expected VOR at Pick",
+                        "adj_vor": "Actual VOR",
+                    },
+                    color_discrete_map={
+                        "QB": "#FF6B6B",
+                        "RB": "#4ECDC4",
+                        "WR": "#45B7D1",
+                        "TE": "#FFA07A",
+                    },
+                )
+
+                # Add diagonal line (perfect match)
+                max_vor = max(
+                    active_picks["expected_vor"].max(), active_picks["adj_vor"].max()
+                )
+                fig.add_trace(
+                    go.Scatter(
+                        x=[0, max_vor],
+                        y=[0, max_vor],
+                        mode="lines",
+                        line=dict(color="gray", dash="dash"),
+                        name="Perfect Match",
+                        showlegend=True,
+                    )
+                )
+
+                fig.update_layout(height=500)
+                st.plotly_chart(fig, use_container_width=True)
+
+                # Biggest steals and reaches
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.subheader("💎 Biggest Steals")
+                    steals = active_picks.nlargest(5, "value_vs_expected")
+                    st.dataframe(
+                        steals[
+                            [
+                                "pick_no",
+                                "player_name",
+                                "expected_vor",
+                                "adj_vor",
+                                "value_vs_expected",
+                            ]
+                        ],
+                        hide_index=True,
+                        column_config={
+                            "pick_no": "Pick",
+                            "player_name": "Player",
+                            "expected_vor": st.column_config.NumberColumn(
+                                "Expected", format="%.1f"
+                            ),
+                            "adj_vor": st.column_config.NumberColumn(
+                                "Actual", format="%.1f"
+                            ),
+                            "value_vs_expected": st.column_config.NumberColumn(
+                                "Surplus", format="%.1f"
+                            ),
+                        },
+                    )
+
+                with col2:
+                    st.subheader("📉 Biggest Reaches")
+                    reaches = active_picks.nsmallest(5, "value_vs_expected")
+                    st.dataframe(
+                        reaches[
+                            [
+                                "pick_no",
+                                "player_name",
+                                "expected_vor",
+                                "adj_vor",
+                                "value_vs_expected",
+                            ]
+                        ],
+                        hide_index=True,
+                        column_config={
+                            "pick_no": "Pick",
+                            "player_name": "Player",
+                            "expected_vor": st.column_config.NumberColumn(
+                                "Expected", format="%.1f"
+                            ),
+                            "adj_vor": st.column_config.NumberColumn(
+                                "Actual", format="%.1f"
+                            ),
+                            "value_vs_expected": st.column_config.NumberColumn(
+                                "Deficit", format="%.1f"
+                            ),
+                        },
+                    )
+            else:
+                st.info("📊 Value curve data available for active players only")
 
         # Grade distribution chart
         st.subheader("Grade Distribution")

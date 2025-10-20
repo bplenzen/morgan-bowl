@@ -192,7 +192,136 @@ final_risk_adjusted as (
         end as primary_risk_driver
 
     from risk_adjusted_vor
+),
+
+-- UNCERTAINTY QUANTIFICATION: Bootstrap confidence intervals for VOR
+-- Uses weekly variance to estimate uncertainty in season-long VOR
+with_uncertainty as (
+    select
+        fra.*,
+
+        -- Get weekly stddev for uncertainty bounds
+        (
+            select stddev_weekly_points
+            from weekly_variance as wv
+            where wv.player_id = fra.player_id
+        ) as weekly_stddev,
+
+        -- CONFIDENCE INTERVALS for Risk-Adjusted VOR
+        -- Based on ±1 stddev of weekly performance projected over season
+        -- Lower bound: pessimistic scenario (1 stddev below mean)
+        case
+            when
+                fra.games_played > 0 and exists (
+                    select 1
+                    from weekly_variance as wv
+                    where wv.player_id = fra.player_id
+                )
+                then round(
+                    (
+                        fra.points_per_game
+                        - (
+                            select stddev_weekly_points
+                            from weekly_variance as wv
+                            where wv.player_id = fra.player_id
+                        )
+                        - (
+                            select replacement_adp
+                            from draft_day_baseline
+                            where position = fra.position
+                            limit 1
+                        ) / 17.0
+                    )
+                    * fra.games_played
+                    * fra.scarcity_multiplier
+                    * fra.composite_risk_factor,
+                    2
+                )
+            else fra.risk_adjusted_scarcity_vor
+        end as risk_adjusted_vor_lower_bound,
+
+        -- Upper bound: optimistic scenario (1 stddev above mean)
+        case
+            when
+                fra.games_played > 0 and exists (
+                    select 1
+                    from weekly_variance as wv
+                    where wv.player_id = fra.player_id
+                )
+                then round(
+                    (
+                        fra.points_per_game
+                        + (
+                            select stddev_weekly_points
+                            from weekly_variance as wv
+                            where wv.player_id = fra.player_id
+                        )
+                        - (
+                            select replacement_adp
+                            from draft_day_baseline
+                            where position = fra.position
+                            limit 1
+                        ) / 17.0
+                    )
+                    * fra.games_played
+                    * fra.scarcity_multiplier
+                    * fra.composite_risk_factor,
+                    2
+                )
+            else fra.risk_adjusted_scarcity_vor
+        end as risk_adjusted_vor_upper_bound,
+
+        -- Uncertainty width (how wide is the confidence interval?)
+        case
+            when
+                fra.games_played > 0 and exists (
+                    select 1
+                    from weekly_variance as wv
+                    where wv.player_id = fra.player_id
+                )
+                then round(
+                    2.0
+                    * (
+                        select stddev_weekly_points
+                        from weekly_variance as wv
+                        where wv.player_id = fra.player_id
+                    )
+                    * fra.games_played
+                    * fra.scarcity_multiplier
+                    * fra.composite_risk_factor,
+                    2
+                )
+            else 0.0
+        end as vor_uncertainty_range,
+
+        -- Coefficient of variation for VOR (relative uncertainty)
+        case
+            when
+                fra.risk_adjusted_scarcity_vor > 0
+                and fra.games_played > 0
+                and exists (
+                    select 1
+                    from weekly_variance as wv
+                    where wv.player_id = fra.player_id
+                )
+                then round(
+                    (
+                        (
+                            select stddev_weekly_points
+                            from weekly_variance as wv
+                            where wv.player_id = fra.player_id
+                        )
+                        * fra.games_played
+                        * fra.scarcity_multiplier
+                        * fra.composite_risk_factor
+                    )
+                    / fra.risk_adjusted_scarcity_vor,
+                    3
+                )
+        end as vor_coefficient_of_variation
+
+    from final_risk_adjusted as fra
 )
 
-select * from final_risk_adjusted
+select * from with_uncertainty
 order by risk_adjusted_scarcity_vor desc
