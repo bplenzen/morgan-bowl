@@ -62,8 +62,6 @@ ingest:weekly:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "web"  # Also allow manual runs
-  environment:
-    name: production
 
 # Job 2: DBT Build (compile and run all models)
 dbt_build:
