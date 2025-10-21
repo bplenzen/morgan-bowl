@@ -37,6 +37,11 @@ ingest:weekly:
   stage: ingest
   script:
     - echo "🏈 Starting weekly data ingestion..."
+    - echo "📋 Checking environment variables..."
+    - echo "SLEEPER_LEAGUE_ID is set: $([[ -n "$SLEEPER_LEAGUE_ID" ]] && echo 'YES' || echo 'NO')"
+    - echo "SLEEPER_SEASON is set: $([[ -n "$SLEEPER_SEASON" ]] && echo 'YES' || echo 'NO')"
+    - export SLEEPER_LEAGUE_ID="${SLEEPER_LEAGUE_ID}"
+    - export SLEEPER_SEASON="${SLEEPER_SEASON}"
     - poetry run python scripts/weekly_ingestion.py
   artifacts:
     # Store the database file so downstream jobs can use it
@@ -50,27 +55,50 @@ ingest:weekly:
   environment:
     name: production
 
-# Job 2: Run DBT Tests
+# Job 2: DBT Build (compile and run all models)
+dbt_build:
+  <<: *python-setup
+  stage: build
+  script:
+    - echo "🔨 Building dbt models..."
+    - cd dbt
+    - poetry run dbt deps
+    - poetry run dbt build --target ci
+  needs:
+    - ingest:weekly
+  artifacts:
+    paths:
+      - dbt/target/run_results.json
+      - dbt/target/manifest.json
+      - dbt/target/catalog.json
+    reports:
+      junit: dbt/target/run_results.json
+    expire_in: 7 days
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "web"
+  coverage: '/PASS=(\d+)/'
+
+# Job 3: Run DBT Tests
 test:dbt:
   <<: *python-setup
   stage: test
   script:
     - echo "🧪 Running DBT tests..."
     - cd dbt
-    - poetry run dbt test
+    - poetry run dbt test --store-failures
   needs:
     - ingest:weekly
   artifacts:
-    reports:
-      junit: dbt/target/junit.xml
     paths:
-      - dbt/target/
+      - dbt/target/run_results.json
+    when: always  # Store even on failure
     expire_in: 7 days
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "web"
 
-# Job 3: Run Python Unit Tests
+# Job 4: Run Python Unit Tests
 test:python_unit:
   <<: *python-setup
   stage: test
@@ -85,7 +113,7 @@ test:python_unit:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "web"
 
-# Job 4: Run API Parity Tests (Data Validation)
+# Job 5: Run API Parity Tests (Data Validation)
 test:api_parity:
   <<: *python-setup
   stage: test
@@ -103,7 +131,7 @@ test:api_parity:
     - if: $CI_PIPELINE_SOURCE == "web"
   allow_failure: false  # CRITICAL: Block pipeline if data doesn't match API
 
-# Job 5: Commit and Push Updated Data
+# Job 6: Commit and Push Updated Data
 # After successful ingestion and tests, commit the updated database
 commit:data:
   stage: deploy
@@ -140,9 +168,10 @@ commit:data:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "web"
+  when: manual
   allow_failure: true  # Don't block pipeline if commit fails
 
-# Job 6: Mirror to GitHub (for Streamlit Cloud deployment)
+# Job 7: Mirror to GitHub (for Streamlit Cloud deployment)
 # Streamlit Cloud only supports GitHub, so we auto-mirror all commits
 mirror:github:
   stage: deploy
