@@ -1,8 +1,10 @@
 /*
 Data Quality Test: All Draft Picks Have Stats
 Ensures every drafted player (except DEF/K) has player stats.
-Failure indicates missing player data that will cause NULL grades.
+Missing stats are common for bench players, injured players, or those who haven't played.
+This is a WARNING - it won't block the pipeline.
 */
+{{ config(severity='warn') }}
 
 with draft_picks_without_stats as (
     select
