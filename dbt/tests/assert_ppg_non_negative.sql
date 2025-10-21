@@ -1,8 +1,10 @@
 /*
 Data Quality Test: Points Per Game Are Non-Negative
-Ensures PPG values make sense (no negative points).
-Negative PPG indicates data quality issues in player stats.
+Flags players with negative fantasy points.
+Note: Negative points are valid in fantasy football (fumbles, INTs, etc.)
+This is a WARNING to identify underperforming players, not a data quality issue.
 */
+{{ config(severity='warn') }}
 
 with negative_ppg as (
     select
