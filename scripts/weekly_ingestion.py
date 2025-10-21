@@ -6,7 +6,9 @@ This script:
 1. Checks current NFL week from Sleeper API
 2. Checks which weeks are already in the database
 3. Ingests any missing weeks up to the current completed week
-4. Runs DBT models to update analytics
+4. Ingests player stats for new weeks
+5. Ingests draft data (once per season, idempotent)
+6. Runs DBT seed and models to update analytics
 """
 import os
 import sys
@@ -19,6 +21,9 @@ import httpx
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from ingestion.cli import main as ingest_main
+from ingestion.config import load_config
+from ingestion.draft_ingestion import ingest_draft
+from ingestion.player_stats_ingestion import ingest_player_stats
 
 
 def get_current_nfl_week() -> int:
@@ -75,14 +80,36 @@ def get_ingested_weeks(db_path: str) -> set[int]:
 
 
 def run_dbt_models():
-    """Run DBT models to update analytics after ingestion."""
+    """Run DBT seed and models to update analytics after ingestion."""
     import subprocess
+
+    print("\n" + "=" * 80)
+    print("🌱 Running DBT seed to load preseason rankings...")
+    print("=" * 80)
+
+    dbt_dir = Path(__file__).parent.parent / "dbt"
+
+    try:
+        # First run dbt seed to load CSV files (preseason rankings)
+        seed_result = subprocess.run(
+            ["poetry", "run", "dbt", "seed"],
+            cwd=str(dbt_dir),
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        print(seed_result.stdout)
+        print("✅ DBT seed completed successfully!")
+
+    except subprocess.CalledProcessError as e:
+        print(f"⚠️  DBT seed failed (non-critical): {e}")
+        print(e.stdout)
+        print(e.stderr)
+        # Don't raise - seed failures are non-critical
 
     print("\n" + "=" * 80)
     print("🔧 Running DBT models to update analytics...")
     print("=" * 80)
-
-    dbt_dir = Path(__file__).parent.parent / "dbt"
 
     try:
         # Run DBT from the dbt directory
@@ -133,7 +160,7 @@ def main():
 
     print(f"\n🔄 Weeks to ingest: {weeks_to_ingest}")
 
-    # Ingest each missing week
+    # Ingest each missing week (matchups, rosters, etc.)
     success = True
     for week in weeks_to_ingest:
         print(f"\n{'=' * 80}")
@@ -149,6 +176,37 @@ def main():
             print(f"❌ Failed to ingest week {week}: {e}")
             success = False
             # Continue with other weeks even if one fails
+
+    # Ingest player stats for new weeks
+    if weeks_to_ingest and success:
+        print(f"\n{'=' * 80}")
+        print(f"📊 Ingesting player stats for weeks {weeks_to_ingest}...")
+        print("=" * 80)
+
+        try:
+            config = load_config()
+            stats_summary = ingest_player_stats(config, weeks_to_ingest)
+            print(f"✅ Player stats ingested successfully!")
+            print(f"   - Weeks processed: {stats_summary['weeks_processed']}")
+            print(f"   - Total player-week records: {stats_summary['total_player_stats']}")
+        except Exception as e:
+            print(f"⚠️  Failed to ingest player stats (non-critical): {e}")
+            # Don't set success = False - player stats are supplementary
+
+    # Ingest draft data (idempotent, safe to re-run)
+    print(f"\n{'=' * 80}")
+    print("🏈 Ingesting draft data...")
+    print("=" * 80)
+
+    try:
+        config = load_config()
+        draft_summary = ingest_draft(config)
+        print(f"✅ Draft data ingested successfully!")
+        print(f"   - Draft ID: {draft_summary['draft_id']}")
+        print(f"   - Picks: {draft_summary['picks_ingested']}")
+    except Exception as e:
+        print(f"⚠️  Failed to ingest draft data (non-critical): {e}")
+        # Don't set success = False - draft data is supplementary
 
     # Run DBT to update analytics
     if success:
