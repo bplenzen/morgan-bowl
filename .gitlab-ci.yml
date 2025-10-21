@@ -14,6 +14,9 @@ variables:
   PYTHON_VERSION: "3.11"
   # Poetry version
   POETRY_VERSION: "1.8.2"
+  # These will be set from GitLab CI/CD settings
+  # SLEEPER_LEAGUE_ID: defined in GitLab UI
+  # SLEEPER_SEASON: defined in GitLab UI
 
 # Template for Python setup (reusable)
 .python-setup: &python-setup
@@ -38,15 +41,17 @@ ingest:weekly:
   script:
     - echo "🏈 Starting weekly data ingestion..."
     - echo "📋 Checking environment variables..."
+    - echo "All environment variables:"
+    - env | grep -E "(SLEEPER|CI_)" | sort
     - |
       if [ -n "$SLEEPER_LEAGUE_ID" ]; then
-        echo "SLEEPER_LEAGUE_ID is set: YES"
+        echo "SLEEPER_LEAGUE_ID is set: YES (length: ${#SLEEPER_LEAGUE_ID})"
       else
         echo "SLEEPER_LEAGUE_ID is set: NO"
       fi
     - |
       if [ -n "$SLEEPER_SEASON" ]; then
-        echo "SLEEPER_SEASON is set: YES"
+        echo "SLEEPER_SEASON is set: YES (value: $SLEEPER_SEASON)"
       else
         echo "SLEEPER_SEASON is set: NO"
       fi
