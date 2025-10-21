@@ -34,7 +34,7 @@ def api_client():
 class TestAPIParityWeekly:
     """Test that weekly data in DB matches Sleeper API exactly."""
 
-    @pytest.mark.parametrize("week", [1, 2, 3, 4, 5, 6])
+    @pytest.mark.parametrize("week", [1, 2, 3, 4, 5, 6, 7])
     def test_matchup_points_match_api(self, week, db_conn, api_client):
         """
         CRITICAL: Verify matchup points in DB exactly match Sleeper API.
@@ -75,7 +75,7 @@ class TestAPIParityWeekly:
                 abs(api_pts - db_pts) < 0.01
             ), f"Week {week}, Roster {roster_id}: API={api_pts}, DB={db_pts}"
 
-    @pytest.mark.parametrize("week", [1, 2, 3, 4, 5, 6])
+    @pytest.mark.parametrize("week", [1, 2, 3, 4, 5, 6, 7])
     def test_matchup_ids_match_api(self, week, db_conn, api_client):
         """Verify matchup IDs in DB match API (correct pairings)."""
         response = api_client.get(f"/league/{LEAGUE_ID}/matchups/{week}")
@@ -164,8 +164,8 @@ class TestDataCompleteness:
     """Test that all expected data is present."""
 
     def test_all_weeks_ingested(self, db_conn):
-        """Verify we have data for all expected weeks (1-6)."""
-        expected_weeks = {1, 2, 3, 4, 5, 6}
+        """Verify we have data for all expected weeks (1-7)."""
+        expected_weeks = {1, 2, 3, 4, 5, 6, 7}
 
         # Check what week tables exist
         query = """
@@ -186,7 +186,7 @@ class TestDataCompleteness:
             actual_weeks == expected_weeks
         ), f"Missing weeks: {expected_weeks - actual_weeks}, Extra: {actual_weeks - expected_weeks}"
 
-    @pytest.mark.parametrize("week", [1, 2, 3, 4, 5, 6])
+    @pytest.mark.parametrize("week", [1, 2, 3, 4, 5, 6, 7])
     def test_week_has_all_rosters(self, week, db_conn):
         """Verify each week has exactly 12 roster entries (one per team)."""
         week_padded = f"{week:02d}"
@@ -198,7 +198,7 @@ class TestDataCompleteness:
 
         assert count == 12, f"Week {week}: Expected 12 rosters, found {count}"
 
-    @pytest.mark.parametrize("week", [1, 2, 3, 4, 5, 6])
+    @pytest.mark.parametrize("week", [1, 2, 3, 4, 5, 6, 7])
     def test_week_has_six_matchups(self, week, db_conn):
         """Verify each week has exactly 6 matchups (12 teams / 2)."""
         week_padded = f"{week:02d}"
@@ -214,7 +214,7 @@ class TestDataCompleteness:
 class TestDataQuality:
     """Test data quality and reasonableness."""
 
-    @pytest.mark.parametrize("week", [1, 2, 3, 4, 5, 6])
+    @pytest.mark.parametrize("week", [1, 2, 3, 4, 5, 6, 7])
     def test_points_are_reasonable(self, week, db_conn):
         """Verify all points are within reasonable bounds."""
         week_padded = f"{week:02d}"
@@ -233,7 +233,7 @@ class TestDataQuality:
             ), f"Week {week}, Roster {roster_id}: Suspiciously high points ({points})"
             assert points is not None, f"Week {week}, Roster {roster_id}: NULL points"
 
-    @pytest.mark.parametrize("week", [1, 2, 3, 4, 5, 6])
+    @pytest.mark.parametrize("week", [1, 2, 3, 4, 5, 6, 7])
     def test_each_matchup_has_two_rosters(self, week, db_conn):
         """Verify each matchup has exactly 2 teams (head-to-head)."""
         week_padded = f"{week:02d}"
