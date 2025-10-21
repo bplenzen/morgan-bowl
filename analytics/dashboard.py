@@ -1,6 +1,8 @@
 """
 🏈 Morgan Bowl Fantasy Football Dashboard
 Interactive analytics for league members to explore standings, luck, and performance.
+
+Last updated: 2025-10-21 (Week 7)
 """
 
 from pathlib import Path
@@ -269,7 +271,7 @@ elif page == "🤓 Luck Analysis":
     # NOTE: This page replaces the old "Justice Rankings" feature (deprecated Oct 2025)
     # Old approach: Simple top-6/bottom-6 median split
     # New approach: All-play record, expected wins, schedule strength, close games
-    # The old fct_justice_record model still exists but is not used in the dashboard
+    # The old fct_justice_record model has been removed (deprecated)
 
     st.markdown(
         """
