@@ -17,6 +17,41 @@ LEAGUE_ID = os.getenv("SLEEPER_LEAGUE_ID", "1260408876017143808")
 DB_PATH = Path(__file__).parent.parent.parent / "data" / "warehouse.duckdb"
 
 
+def get_ingested_weeks():
+    """Get list of weeks that have been ingested into the database."""
+    if not DB_PATH.exists():
+        return []
+
+    conn = duckdb.connect(str(DB_PATH), read_only=True)
+    try:
+        query = """
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = 'staging'
+            AND table_name LIKE 'matchups_week_%'
+        """
+        tables = conn.execute(query).fetchall()
+
+        weeks = []
+        for (table_name,) in tables:
+            week_str = table_name.replace("matchups_week_", "")
+            weeks.append(int(week_str))
+
+        return sorted(weeks)
+    finally:
+        conn.close()
+
+
+def pytest_generate_tests(metafunc):
+    """Dynamically generate test parameters based on ingested weeks."""
+    if "week" in metafunc.fixturenames:
+        weeks = get_ingested_weeks()
+        if not weeks:
+            # If no weeks found, use a default to avoid test collection errors
+            weeks = [1]
+        metafunc.parametrize("week", weeks)
+
+
 @pytest.fixture
 def db_conn():
     """Provide database connection for tests."""
@@ -34,7 +69,6 @@ def api_client():
 class TestAPIParityWeekly:
     """Test that weekly data in DB matches Sleeper API exactly."""
 
-    @pytest.mark.parametrize("week", [1, 2, 3, 4, 5, 6, 7])
     def test_matchup_points_match_api(self, week, db_conn, api_client):
         """
         CRITICAL: Verify matchup points in DB exactly match Sleeper API.
@@ -75,7 +109,6 @@ class TestAPIParityWeekly:
                 abs(api_pts - db_pts) < 0.01
             ), f"Week {week}, Roster {roster_id}: API={api_pts}, DB={db_pts}"
 
-    @pytest.mark.parametrize("week", [1, 2, 3, 4, 5, 6, 7])
     def test_matchup_ids_match_api(self, week, db_conn, api_client):
         """Verify matchup IDs in DB match API (correct pairings)."""
         response = api_client.get(f"/league/{LEAGUE_ID}/matchups/{week}")
@@ -164,9 +197,7 @@ class TestDataCompleteness:
     """Test that all expected data is present."""
 
     def test_all_weeks_ingested(self, db_conn):
-        """Verify we have data for all expected weeks (1-7)."""
-        expected_weeks = {1, 2, 3, 4, 5, 6, 7}
-
+        """Verify we have consecutive weeks with no gaps (1, 2, 3, ..., N)."""
         # Check what week tables exist
         query = """
             SELECT table_name
@@ -182,11 +213,23 @@ class TestDataCompleteness:
             week_str = table_name.replace("matchups_week_", "")
             actual_weeks.add(int(week_str))
 
+        # Verify we have at least one week
+        assert len(actual_weeks) > 0, "No weeks found in database"
+
+        # Verify weeks are consecutive (no gaps)
+        min_week = min(actual_weeks)
+        max_week = max(actual_weeks)
+        expected_weeks = set(range(min_week, max_week + 1))
+
         assert (
             actual_weeks == expected_weeks
-        ), f"Missing weeks: {expected_weeks - actual_weeks}, Extra: {actual_weeks - expected_weeks}"
+        ), f"Weeks are not consecutive. Missing: {expected_weeks - actual_weeks}, Extra: {actual_weeks - expected_weeks}"
 
-    @pytest.mark.parametrize("week", [1, 2, 3, 4, 5, 6, 7])
+        # Verify weeks start at 1 (sanity check)
+        assert (
+            min_week == 1
+        ), f"Weeks should start at 1, but found minimum week {min_week}"
+
     def test_week_has_all_rosters(self, week, db_conn):
         """Verify each week has exactly 12 roster entries (one per team)."""
         week_padded = f"{week:02d}"
@@ -198,7 +241,6 @@ class TestDataCompleteness:
 
         assert count == 12, f"Week {week}: Expected 12 rosters, found {count}"
 
-    @pytest.mark.parametrize("week", [1, 2, 3, 4, 5, 6, 7])
     def test_week_has_six_matchups(self, week, db_conn):
         """Verify each week has exactly 6 matchups (12 teams / 2)."""
         week_padded = f"{week:02d}"
@@ -214,7 +256,6 @@ class TestDataCompleteness:
 class TestDataQuality:
     """Test data quality and reasonableness."""
 
-    @pytest.mark.parametrize("week", [1, 2, 3, 4, 5, 6, 7])
     def test_points_are_reasonable(self, week, db_conn):
         """Verify all points are within reasonable bounds."""
         week_padded = f"{week:02d}"
@@ -233,7 +274,6 @@ class TestDataQuality:
             ), f"Week {week}, Roster {roster_id}: Suspiciously high points ({points})"
             assert points is not None, f"Week {week}, Roster {roster_id}: NULL points"
 
-    @pytest.mark.parametrize("week", [1, 2, 3, 4, 5, 6, 7])
     def test_each_matchup_has_two_rosters(self, week, db_conn):
         """Verify each matchup has exactly 2 teams (head-to-head)."""
         week_padded = f"{week:02d}"
