@@ -38,8 +38,18 @@ ingest:weekly:
   script:
     - echo "🏈 Starting weekly data ingestion..."
     - echo "📋 Checking environment variables..."
-    - echo "SLEEPER_LEAGUE_ID is set: $([[ -n "$SLEEPER_LEAGUE_ID" ]] && echo 'YES' || echo 'NO')"
-    - echo "SLEEPER_SEASON is set: $([[ -n "$SLEEPER_SEASON" ]] && echo 'YES' || echo 'NO')"
+    - |
+      if [ -n "$SLEEPER_LEAGUE_ID" ]; then
+        echo "SLEEPER_LEAGUE_ID is set: YES"
+      else
+        echo "SLEEPER_LEAGUE_ID is set: NO"
+      fi
+    - |
+      if [ -n "$SLEEPER_SEASON" ]; then
+        echo "SLEEPER_SEASON is set: YES"
+      else
+        echo "SLEEPER_SEASON is set: NO"
+      fi
     - export SLEEPER_LEAGUE_ID="${SLEEPER_LEAGUE_ID}"
     - export SLEEPER_SEASON="${SLEEPER_SEASON}"
     - poetry run python scripts/weekly_ingestion.py
