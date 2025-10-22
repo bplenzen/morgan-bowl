@@ -23,6 +23,28 @@ sources:
         description: "Week 5 matchup results."
       - name: matchups_week_06
         description: "Week 6 matchup results."
+      - name: matchups_week_07
+        description: "Week 7 matchup results."
+      - name: matchups_week_08
+        description: "Week 8 matchup results."
+      - name: matchups_week_09
+        description: "Week 9 matchup results."
+      - name: matchups_week_10
+        description: "Week 10 matchup results."
+      - name: matchups_week_11
+        description: "Week 11 matchup results."
+      - name: matchups_week_12
+        description: "Week 12 matchup results."
+      - name: matchups_week_13
+        description: "Week 13 matchup results."
+      - name: matchups_week_14
+        description: "Week 14 matchup results."
+      - name: matchups_week_15
+        description: "Week 15 matchup results."
+      - name: matchups_week_16
+        description: "Week 16 matchup results."
+      - name: matchups_week_17
+        description: "Week 17 matchup results."
       - name: transactions_week_01
         description: "Week 1 transactions (waivers/trades)."
       - name: transactions_week_02
@@ -49,3 +71,25 @@ sources:
         description: "Week 5 player statistics from Sleeper."
       - name: player_stats_week_06
         description: "Week 6 player statistics from Sleeper."
+      - name: player_stats_week_07
+        description: "Week 7 player statistics from Sleeper."
+      - name: player_stats_week_08
+        description: "Week 8 player statistics from Sleeper."
+      - name: player_stats_week_09
+        description: "Week 9 player statistics from Sleeper."
+      - name: player_stats_week_10
+        description: "Week 10 player statistics from Sleeper."
+      - name: player_stats_week_11
+        description: "Week 11 player statistics from Sleeper."
+      - name: player_stats_week_12
+        description: "Week 12 player statistics from Sleeper."
+      - name: player_stats_week_13
+        description: "Week 13 player statistics from Sleeper."
+      - name: player_stats_week_14
+        description: "Week 14 player statistics from Sleeper."
+      - name: player_stats_week_15
+        description: "Week 15 player statistics from Sleeper."
+      - name: player_stats_week_16
+        description: "Week 16 player statistics from Sleeper."
+      - name: player_stats_week_17
+        description: "Week 17 player statistics from Sleeper."
