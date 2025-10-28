@@ -356,6 +356,7 @@ elif page == "🤓 Luck Analysis":
         ],
         use_container_width=True,
         hide_index=True,
+        height=550,  # Show all 12 teams without scrolling
         column_config={
             "manager_name": "Manager",
             "actual_record": "Actual Record",
@@ -408,6 +409,7 @@ elif page == "🤓 Luck Analysis":
             ],
             use_container_width=True,
             hide_index=True,
+            height=550,  # Show all teams
             column_config={
                 "manager_name": "Manager",
                 "all_play_wins": st.column_config.NumberColumn(
@@ -435,6 +437,7 @@ elif page == "🤓 Luck Analysis":
             ],
             use_container_width=True,
             hide_index=True,
+            height=550,  # Show all teams
             column_config={
                 "manager_name": "Manager",
                 "schedule_luck_index": st.column_config.NumberColumn(
@@ -468,6 +471,7 @@ elif page == "🤓 Luck Analysis":
             ],
             use_container_width=True,
             hide_index=True,
+            height=550,  # Show all teams
             column_config={
                 "manager_name": "Manager",
                 "close_record": "Close Game Record",
@@ -487,6 +491,7 @@ elif page == "🤓 Luck Analysis":
             ],
             use_container_width=True,
             hide_index=True,
+            height=550,  # Show all teams
             column_config={
                 "manager_name": "Manager",
                 "avg_points": st.column_config.NumberColumn(
