@@ -61,6 +61,15 @@ with unioned as (
         roster_id,
         points
     from {{ source('staging', 'matchups_week_07') }}
+
+    union all
+
+    select
+        8 as week,
+        matchup_id,
+        roster_id,
+        points
+    from {{ source('staging', 'matchups_week_08') }}
 )
 
 select
