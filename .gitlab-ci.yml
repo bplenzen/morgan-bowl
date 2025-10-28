@@ -32,7 +32,7 @@ variables:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
       - .venv/
-      - data/
+      # DO NOT cache data/ - it contains warehouse.duckdb which should come from artifacts, not cache
 
 # Job 1: Weekly Data Ingestion
 ingest:weekly:
@@ -154,10 +154,15 @@ commit:data:
     - apk add --no-cache git
     - git config user.email "ci@morgan-bowl.pipeline"
     - git config user.name "Morgan Bowl CI/CD"
+    # Verify artifact was downloaded and save it (git pull will overwrite it)
+    - ls -lh data/warehouse.duckdb || echo "⚠️ WARNING: warehouse.duckdb not found in artifacts!"
+    - cp -f data/warehouse.duckdb /tmp/warehouse.duckdb.artifact
     # Fetch latest to avoid conflicts
     - git fetch origin main
     - git checkout main
     - git pull origin main
+    # Restore the artifact database (git pull overwrote it with old version)
+    - cp -f /tmp/warehouse.duckdb.artifact data/warehouse.duckdb
     # Stage the updated database
     - git add data/warehouse.duckdb
     # Only commit if there are changes
@@ -181,7 +186,7 @@ commit:data:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "web"
-  when: manual
+  # when: manual  # Removed to make deploy automatic
   allow_failure: true  # Don't block pipeline if commit fails
 
 # Job 7: Mirror to GitHub (for Streamlit Cloud deployment)
