@@ -2,7 +2,7 @@
 🏈 Morgan Bowl Fantasy Football Dashboard
 Interactive analytics for league members to explore standings, luck, and performance.
 
-Last updated: 2025-10-21 (Week 7)
+Last updated: 2025-10-28 (Week 8)
 """
 
 from pathlib import Path
@@ -40,18 +40,35 @@ st.markdown(
 
 
 # Database connection
+def get_db_path():
+    """Get the path to the DuckDB warehouse"""
+    return Path(__file__).parent.parent / "data" / "warehouse.duckdb"
+
+
+def get_db_mtime():
+    """Get database file modification time for cache invalidation"""
+    db_path = get_db_path()
+    if db_path.exists():
+        return db_path.stat().st_mtime
+    return 0
+
+
 @st.cache_resource
-def get_db_connection():
-    """Connect to DuckDB warehouse"""
-    db_path = Path(__file__).parent.parent / "data" / "warehouse.duckdb"
+def get_db_connection(_db_mtime):
+    """Connect to DuckDB warehouse
+
+    Args:
+        _db_mtime: Database file modification time (used for cache invalidation)
+    """
+    db_path = get_db_path()
     return duckdb.connect(str(db_path), read_only=True)
 
 
 @st.cache_data
-def load_standings():
+def load_standings(_db_mtime):
     """Load current standings"""
     try:
-        conn = get_db_connection()
+        conn = get_db_connection(_db_mtime)
         return conn.execute(
             """
             SELECT
@@ -74,10 +91,10 @@ def load_standings():
 
 
 @st.cache_data
-def load_weekly_performance():
+def load_weekly_performance(_db_mtime):
     """Load week-by-week performance"""
     try:
-        conn = get_db_connection()
+        conn = get_db_connection(_db_mtime)
         return conn.execute(
             """
             SELECT
@@ -97,10 +114,10 @@ def load_weekly_performance():
 
 
 @st.cache_data
-def load_advanced_luck():
+def load_advanced_luck(_db_mtime):
     """Load advanced luck metrics (all-play record, expected wins, schedule strength)"""
     try:
-        conn = get_db_connection()
+        conn = get_db_connection(_db_mtime)
         return conn.execute(
             """
             SELECT
@@ -133,10 +150,10 @@ def load_advanced_luck():
 
 
 @st.cache_data
-def load_draft_performance():
+def load_draft_performance(_db_mtime):
     """Load draft analysis with grades and metrics (including NEW uncertainty quantification)"""
     try:
-        conn = get_db_connection()
+        conn = get_db_connection(_db_mtime)
         return conn.execute(
             """
             SELECT
@@ -211,7 +228,7 @@ with st.sidebar:
 if page == "📊 Standings":
     st.header("Current Standings")
 
-    standings_df = load_standings()
+    standings_df = load_standings(get_db_mtime())
 
     # Top metrics
     col1, col2, col3, col4 = st.columns(4)
@@ -292,7 +309,7 @@ elif page == "🤓 Luck Analysis":
     """
     )
 
-    advanced_df = load_advanced_luck()
+    advanced_df = load_advanced_luck(get_db_mtime())
 
     # Top metrics
     col1, col2, col3 = st.columns(3)
@@ -510,7 +527,7 @@ elif page == "🤓 Luck Analysis":
 elif page == "📈 Weekly Performance":
     st.header("Week-by-Week Performance")
 
-    weekly_df = load_weekly_performance()
+    weekly_df = load_weekly_performance(get_db_mtime())
 
     # Week selector
     weeks = sorted(weekly_df["week"].unique())
@@ -615,7 +632,7 @@ elif page == "🔥 Power Rankings":
         "*Coming soon: Advanced metrics including strength of schedule, momentum, and playoff probability*"
     )
 
-    standings_df = load_standings()
+    standings_df = load_standings(get_db_mtime())
 
     # Simple power ranking: 50% win%, 50% points
     power_df = standings_df.copy()
@@ -673,7 +690,7 @@ elif page == "🎯 Draft Analysis":
     """
     )
 
-    draft_df = load_draft_performance()
+    draft_df = load_draft_performance(get_db_mtime())
 
     if draft_df.empty:
         st.warning("No draft data available")
