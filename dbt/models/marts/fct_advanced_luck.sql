@@ -2,148 +2,82 @@
 
 -- Advanced luck metrics using multiple statistical approaches
 -- This goes beyond simple median-based "justice record"
+-- Refactored to use composable intermediate models (MP-1)
 
 with weekly_matchups as (
     select
-        week,
-        roster_id,
-        manager_name,
-        points,
-        opponent_points,
-        win_flag
-    from {{ ref('fct_matchups') }}
+        fm.week,
+        fm.roster_id,
+        fm.manager_name,
+        fm.points,
+        fm.opponent_points,
+        fm.win_flag
+    from {{ ref('fct_matchups') }} as fm
 ),
 
--- 1. ALL-PLAY RECORD: If you played everyone each week, how many would you beat?
-all_play_results as (
-    select
-        m1.week,
-        m1.roster_id,
-        m1.manager_name,
-        m1.points,
-        -- Count how many teams you would have beaten this week
-        sum(case when m1.points > m2.points then 1 else 0 end) as all_play_wins,
-        -- Total opponents (should be 11 with 12 teams)
-        count(*) as all_play_games
-    from weekly_matchups as m1
-    cross join weekly_matchups as m2
-    where
-        m1.week = m2.week
-        and m1.roster_id <> m2.roster_id
-    group by m1.week, m1.roster_id, m1.manager_name, m1.points
-),
-
-all_play_season as (
+-- WINS OVER EXPECTED: Use pre-calculated all-play based expected wins
+wins_over_expected as (
     select
         roster_id,
         manager_name,
-        sum(all_play_wins) as all_play_wins,
-        sum(all_play_games) as all_play_games,
-        round(sum(all_play_wins)::double / sum(all_play_games), 3)
-            as all_play_win_pct
-    from all_play_results
-    group by roster_id, manager_name
-),
-
--- 2. EXPECTED WINS based on all-play win percentage
-expected_wins_calc as (
-    select
-        roster_id,
-        manager_name,
+        actual_wins,
+        actual_losses,
+        expected_wins,
         all_play_wins,
         all_play_games,
         all_play_win_pct,
-        -- Expected wins = all-play win% × actual games played
-        round(
-            all_play_win_pct * (select count(distinct week) from weekly_matchups
-            ),
-            2
-        ) as expected_wins
-    from all_play_season
+        wins_over_expected
+    from {{ ref('int_wins_over_expected') }}
 ),
 
--- 3. SCHEDULE STRENGTH LUCK: Did you face opponents on their hot/cold weeks?
-opponent_performance as (
-    select
-        m.week,
-        m.roster_id,
-        m.manager_name,
-        m.opponent_points,
-        -- Get opponent's season average
-        avg(opp_all.points)
-            over (partition by m.week, m.opponent_roster_id)
-            as opponent_avg_points
-    from {{ ref('fct_matchups') }} as m
-    left join weekly_matchups as opp_all
-        on m.opponent_roster_id = opp_all.roster_id
-),
-
+-- SCHEDULE LUCK: Use pre-calculated opponent strength timing
 schedule_luck as (
     select
         roster_id,
         manager_name,
-        -- Positive = faced opponents on good weeks (unlucky)
-        -- Negative = faced opponents on bad weeks (lucky)
-        round(avg(opponent_points - opponent_avg_points), 2)
-            as schedule_luck_index
-    from opponent_performance
+        round(avg(schedule_luck_index), 2) as schedule_luck_index
+    from {{ ref('int_schedule_luck') }}
     group by roster_id, manager_name
 ),
 
--- 4. CLOSE GAME ANALYSIS: Games decided by <10 points (somewhat arbitrary)
+-- CLOSE GAMES: Use pre-calculated close game outcomes
 close_games as (
     select
         roster_id,
         manager_name,
-        sum(case
-            when abs(points - opponent_points) < 10 and win_flag = 1 then 1
-            else 0
-        end) as close_wins,
-        sum(case
-            when abs(points - opponent_points) < 10 and win_flag = 0 then 1
-            else 0
-        end) as close_losses,
-        sum(case when abs(points - opponent_points) < 10 then 1 else 0 end)
-            as total_close_games
-    from weekly_matchups
+        max(total_close_wins) as close_wins,
+        max(total_close_losses) as close_losses,
+        max(total_close_games) as total_close_games,
+        max(close_game_win_pct) as close_game_win_pct
+    from {{ ref('int_close_game_outcomes') }}
     group by roster_id, manager_name
 ),
 
--- 5. CONSISTENCY METRICS
+-- CONSISTENCY METRICS
 consistency as (
     select
-        roster_id,
-        manager_name,
-        round(stddev(points), 2) as points_stddev,
-        round(avg(points), 2) as avg_points,
-        round(min(points), 2) as min_points,
-        round(max(points), 2) as max_points
-    from weekly_matchups
-    group by roster_id, manager_name
-),
-
--- Get actual record
-actual_record as (
-    select
-        roster_id,
-        manager_name,
-        wins as actual_wins,
-        losses as actual_losses
-    from {{ ref('fct_standings') }}
+        wm.roster_id,
+        wm.manager_name,
+        round(stddev(wm.points), 2) as points_stddev,
+        round(avg(wm.points), 2) as avg_points,
+        round(min(wm.points), 2) as min_points,
+        round(max(wm.points), 2) as max_points
+    from weekly_matchups as wm
+    group by wm.roster_id, wm.manager_name
 ),
 
 -- Combine everything
 final as (
     select
-        ar.roster_id,
-        ar.manager_name,
+        woe.roster_id,
+        woe.manager_name,
 
         -- Actual record
-        ar.actual_wins,
-        ar.actual_losses,
+        woe.actual_wins,
+        woe.actual_losses,
 
         -- Expected wins (point estimate from deterministic all-play)
-        ew.expected_wins,
+        woe.expected_wins,
 
         -- Expected wins uncertainty (from Monte Carlo / Wilson score interval)
         mc.expected_wins_p05,
@@ -152,11 +86,11 @@ final as (
         mc.expected_wins_ci_width,
         mc.expected_wins_std_error,
 
-        ew.all_play_wins,
+        woe.all_play_wins,
 
         -- All-play stats
-        ew.all_play_games,
-        ew.all_play_win_pct,
+        woe.all_play_games,
+        woe.all_play_win_pct,
         sl.schedule_luck_index,
 
         -- Schedule luck
@@ -169,14 +103,14 @@ final as (
         c.avg_points,
 
         -- Consistency
-        round(ar.actual_wins - ew.expected_wins, 2) as wins_over_expected,
+        woe.wins_over_expected,
 
         -- Wins over expected with uncertainty bounds
-        round(ar.actual_wins - mc.expected_wins_p50, 2)
+        round(woe.actual_wins - mc.expected_wins_p50, 2)
             as wins_over_expected_p50,
-        round(ar.actual_wins - mc.expected_wins_p95, 2)
+        round(woe.actual_wins - mc.expected_wins_p95, 2)
             as wins_over_expected_lower,
-        round(ar.actual_wins - mc.expected_wins_p05, 2)
+        round(woe.actual_wins - mc.expected_wins_p05, 2)
             as wins_over_expected_upper,
 
         case
@@ -186,91 +120,101 @@ final as (
         c.max_points - c.min_points as points_range,
 
         -- COMPOSITE LUCK SCORE (normalized 0-100, 50 = average luck)
-        -- SIMPLIFIED FORMULA (Oct 2025): Empirical calibration via variance decomposition
-        -- showed that schedule/close-game components only explain 46% of variance in
-        -- wins_over_expected (R² = 0.464), indicating wins_over_expected already captures
-        -- total luck via all-play methodology. Adding schedule/close components with
-        -- additional weights was found to be double-counting (weights 10-30x overweighted).
-        -- See: analysis/luck_weight_calibration.ipynb and docs/luck_weight_calibration_results.md
-        -- Formula: 50 + (wins_over_expected × 10) for ±10 points per win deviation
-        round(50 + (ar.actual_wins - ew.expected_wins) * 10, 1)
-            as composite_luck_score
+        -- MULTI-COMPONENT FORMULA (Nov 2025): Reintroduced schedule/close components
+        -- based on user feedback that these factors should be explicitly weighted.
+        -- Weights: 60% wins over expected, 35% schedule luck, 5% close games
+        -- Formula components:
+        --   1. Wins over expected × 10 (core all-play luck metric)
+        --   2. Schedule luck index × -1.0 (negative because positive = unlucky)
+        --   3. (Close game win% - 0.5) × 5 (centered at 50% baseline)
+        round(
+            50
+            + (woe.wins_over_expected * 10)  -- 60% weight: ±30 pts for ±3 wins
+            -- 35% weight: ±20 pts
+            + (coalesce(sl.schedule_luck_index, 0) * -1.0)
+            + (coalesce(
+                case
+                    when cg.total_close_games > 0
+                        then
+                            (cg.close_wins::double / cg.total_close_games) - 0.5
+                    else 0
+                end, 0
+            ) * 5),  -- 5% weight: ±2.5 pts
+            1
+        ) as composite_luck_score
 
-    from actual_record as ar
-    left join
-        expected_wins_calc as ew
-        on ar.roster_id = ew.roster_id and ar.manager_name = ew.manager_name
+    from wins_over_expected as woe
     left join
         {{ ref('int_monte_carlo_expected_wins') }} as mc
-        on ar.roster_id = mc.roster_id and ar.manager_name = mc.manager_name
+        on woe.roster_id = mc.roster_id and woe.manager_name = mc.manager_name
     left join
         schedule_luck as sl
-        on ar.roster_id = sl.roster_id and ar.manager_name = sl.manager_name
+        on woe.roster_id = sl.roster_id and woe.manager_name = sl.manager_name
     left join
         close_games as cg
-        on ar.roster_id = cg.roster_id and ar.manager_name = cg.manager_name
+        on woe.roster_id = cg.roster_id and woe.manager_name = cg.manager_name
     left join
         consistency as c
-        on ar.roster_id = c.roster_id and ar.manager_name = c.manager_name
+        on woe.roster_id = c.roster_id and woe.manager_name = c.manager_name
 )
 
 select
-    roster_id,
-    manager_name,
+    f.roster_id,
+    f.manager_name,
 
     -- Actual vs Expected
-    actual_wins,
-    actual_losses,
-    expected_wins,
-    wins_over_expected,
+    f.actual_wins,
+    f.actual_losses,
+    f.expected_wins,
+    f.wins_over_expected,
 
     -- Expected wins uncertainty (Monte Carlo / Wilson score intervals)
-    expected_wins_p05,
-    expected_wins_p50,
-    expected_wins_p95,
-    expected_wins_ci_width,
-    expected_wins_std_error,
+    f.expected_wins_p05,
+    f.expected_wins_p50,
+    f.expected_wins_p95,
+    f.expected_wins_ci_width,
+    f.expected_wins_std_error,
 
     -- Wins over expected with uncertainty bounds
-    wins_over_expected_p50,
-    wins_over_expected_lower,
-    wins_over_expected_upper,
+    f.wins_over_expected_p50,
+    f.wins_over_expected_lower,
+    f.wins_over_expected_upper,
 
     -- All-play record (beat X out of 66 possible matchups if 6 weeks × 11 opponents)
-    all_play_wins,
-    all_play_games,
-    all_play_win_pct,
+    f.all_play_wins,
+    f.all_play_games,
+    f.all_play_win_pct,
 
     -- Schedule difficulty
-    schedule_luck_index,
-    close_wins,
+    f.schedule_luck_index,
+    f.close_wins,
 
     -- Close game performance
-    close_losses,
-    total_close_games,
-    close_game_win_pct,
-    points_stddev,
+    f.close_losses,
+    f.total_close_games,
+    f.close_game_win_pct,
+    f.points_stddev,
 
     -- Consistency metrics
-    avg_points,
-    points_range,
-    composite_luck_score,
+    f.avg_points,
+    f.points_range,
+    f.composite_luck_score,
 
     -- OVERALL LUCK RATING (0-100 scale, 50 = average)
     case
-        when schedule_luck_index > 5 then 'Brutal Schedule'
-        when schedule_luck_index > 2 then 'Tough Schedule'
-        when schedule_luck_index > -2 then 'Average Schedule'
-        when schedule_luck_index > -5 then 'Easy Schedule'
+        when f.schedule_luck_index > 5 then 'Brutal Schedule'
+        when f.schedule_luck_index > 2 then 'Tough Schedule'
+        when f.schedule_luck_index > -2 then 'Average Schedule'
+        when f.schedule_luck_index > -5 then 'Easy Schedule'
         else 'Cupcake Schedule'
     end as schedule_difficulty,
     case
-        when composite_luck_score >= 65 then 'VERY LUCKY'
-        when composite_luck_score >= 55 then 'Lucky'
-        when composite_luck_score >= 45 then 'Fair'
-        when composite_luck_score >= 35 then 'Unlucky'
+        when f.composite_luck_score >= 65 then 'VERY LUCKY'
+        when f.composite_luck_score >= 55 then 'Lucky'
+        when f.composite_luck_score >= 45 then 'Fair'
+        when f.composite_luck_score >= 35 then 'Unlucky'
         else 'VERY UNLUCKY'
     end as luck_rating
 
-from final
-order by composite_luck_score desc
+from final as f
+order by f.composite_luck_score desc

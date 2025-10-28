@@ -207,7 +207,6 @@ with st.sidebar:
             "📊 Standings",
             "🤓 Luck Analysis",
             "📈 Weekly Performance",
-            "🔥 Power Rankings",
             "🎯 Draft Analysis",
         ],
     )
@@ -220,7 +219,6 @@ with st.sidebar:
     - **Actual Record**: Head-to-head wins/losses
     - **Luck Analysis**: Advanced statistical metrics (all-play record, expected wins, schedule strength)
     - **Weekly Performance**: Scoring trends over time
-    - **Power Rankings**: Combined performance metrics
     """
     )
 
@@ -296,15 +294,15 @@ elif page == "🤓 Luck Analysis":
     ```
     50 (baseline) +
     (Wins Over Expected × 10) +        [60% weight]
-    (Schedule Luck Index × -0.5) +     [20% weight]
-    (Close Game Win% - 0.5) × 20       [20% weight]
+    (Schedule Luck Index × -1.0) +     [35% weight]
+    (Close Game Win% - 0.5) × 5        [5% weight]
     ```
 
     **Key Metrics:**
     - **Expected Wins**: If you played everyone each week, how many total games would you win? That percentage × games played = expected wins.
     - **Wins Over Expected**: Actual wins minus expected wins. The most direct measure of luck.
     - **Schedule Luck Index**: Difference between opponent's actual score and their season average. Positive = you faced tough opponents (unlucky).
-    - **Close Games**: Games decided by <10 points. Essentially coin flips.
+    - **Close Games**: Games decided by <5 points. True coin flips with minimal skill influence.
     - **Composite Luck Score**: 0-100 scale combining all factors (50 = average luck).
     """
     )
@@ -348,6 +346,10 @@ elif page == "🤓 Luck Analysis":
                 "actual_record",
                 "expected_wins",
                 "wins_over_expected",
+                "schedule_luck_index",
+                "schedule_difficulty",
+                "close_game_win_pct",
+                "total_close_games",
                 "composite_luck_score",
                 "luck_rating",
             ]
@@ -358,21 +360,39 @@ elif page == "🤓 Luck Analysis":
             "manager_name": "Manager",
             "actual_record": "Actual Record",
             "expected_wins": st.column_config.NumberColumn(
-                "Expected Wins", help="Based on all-play win percentage", format="%.2f"
+                "Exp Wins", help="Based on all-play win percentage", format="%.2f"
             ),
             "wins_over_expected": st.column_config.NumberColumn(
-                "Wins Over Expected",
-                help="Actual - Expected (best luck metric)",
+                "WOE",
+                help="Wins Over Expected (60% weight in composite)",
                 format="%.2f",
             ),
+            "schedule_luck_index": st.column_config.NumberColumn(
+                "Sched Luck",
+                help="Schedule Luck Index (35% weight). Positive = unlucky, negative = lucky",
+                format="%.2f",
+            ),
+            "schedule_difficulty": st.column_config.TextColumn(
+                "Schedule",
+                help="Schedule difficulty rating",
+            ),
+            "close_game_win_pct": st.column_config.NumberColumn(
+                "Close Win %",
+                help="Win % in games decided by <5 pts (5% weight)",
+                format="%.3f",
+            ),
+            "total_close_games": st.column_config.NumberColumn(
+                "Close Games",
+                help="Number of games decided by <5 points",
+            ),
             "composite_luck_score": st.column_config.ProgressColumn(
-                "Luck Score",
-                help="0-100 scale, 50 = average",
+                "Composite Score",
+                help="0-100 scale combining all factors (50 = average)",
                 format="%.1f",
                 min_value=0,
                 max_value=100,
             ),
-            "luck_rating": "Luck Rating",
+            "luck_rating": "Rating",
         },
     )
 
@@ -381,8 +401,9 @@ elif page == "🤓 Luck Analysis":
         st.markdown(
             "**What is All-Play Record?** If you played every team in the league each week, this is how you'd perform."
         )
+        all_play_sorted = advanced_df.sort_values("all_play_win_pct", ascending=False)
         st.dataframe(
-            advanced_df[
+            all_play_sorted[
                 ["manager_name", "all_play_wins", "all_play_games", "all_play_win_pct"]
             ],
             use_container_width=True,
@@ -405,8 +426,13 @@ elif page == "🤓 Luck Analysis":
         st.markdown(
             "**Schedule Luck**: Positive numbers = you faced opponents on their good weeks (unlucky), negative = faced them on bad weeks (lucky)"
         )
+        schedule_sorted = advanced_df.sort_values(
+            "schedule_luck_index", ascending=False
+        )
         st.dataframe(
-            advanced_df[["manager_name", "schedule_luck_index", "schedule_difficulty"]],
+            schedule_sorted[
+                ["manager_name", "schedule_luck_index", "schedule_difficulty"]
+            ],
             use_container_width=True,
             hide_index=True,
             column_config={
@@ -420,7 +446,7 @@ elif page == "🤓 Luck Analysis":
 
     with st.expander("🎲 Close Game Performance"):
         st.markdown(
-            "**Close Games**: Games decided by <10 points. These are basically coin flips - good indicator of luck!"
+            "**Close Games**: Games decided by <5 points. True coin flips where luck dominates over skill."
         )
         close_df = advanced_df[advanced_df["total_close_games"] > 0].copy()
         close_df["close_record"] = (
@@ -428,8 +454,11 @@ elif page == "🤓 Luck Analysis":
             + "-"
             + close_df["close_losses"].astype(int).astype(str)
         )
+        close_sorted = close_df.sort_values(
+            "close_game_win_pct", ascending=False, na_position="last"
+        )
         st.dataframe(
-            close_df[
+            close_sorted[
                 [
                     "manager_name",
                     "close_record",
@@ -451,8 +480,9 @@ elif page == "🤓 Luck Analysis":
 
     with st.expander("📉 Consistency Metrics"):
         st.markdown("**Consistency**: How much do your scores vary week-to-week?")
+        consistency_sorted = advanced_df.sort_values("points_stddev", ascending=True)
         st.dataframe(
-            advanced_df[
+            consistency_sorted[
                 ["manager_name", "avg_points", "points_stddev", "points_range"]
             ],
             use_container_width=True,
@@ -521,7 +551,7 @@ elif page == "🤓 Luck Analysis":
 
     st.markdown("---")
     st.markdown(
-        "*🤓 Methodology: Combines all-play record (60%), schedule strength (20%), and close game performance (20%) into a single composite score.*"
+        "*🤓 Methodology: Combines all-play record (60%), schedule strength (35%), and close game performance (5%) into a single composite score.*"
     )
 
 elif page == "📈 Weekly Performance":
@@ -625,55 +655,6 @@ elif page == "📈 Weekly Performance":
     )
 
     st.plotly_chart(fig, use_container_width=True)
-
-elif page == "🔥 Power Rankings":
-    st.header("Power Rankings")
-    st.markdown(
-        "*Coming soon: Advanced metrics including strength of schedule, momentum, and playoff probability*"
-    )
-
-    standings_df = load_standings(get_db_mtime())
-
-    # Simple power ranking: 50% win%, 50% points
-    power_df = standings_df.copy()
-    power_df["power_score"] = (
-        power_df["win_pct"] * 0.5
-        + (power_df["points_for"] / power_df["points_for"].max()) * 0.5
-    )
-
-    power_df = power_df.sort_values("power_score", ascending=False).reset_index(
-        drop=True
-    )
-    power_df["rank"] = range(1, len(power_df) + 1)
-
-    st.dataframe(
-        power_df[
-            [
-                "rank",
-                "manager_name",
-                "wins",
-                "losses",
-                "points_for",
-                "power_score",
-            ]
-        ],
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "rank": "Rank",
-            "manager_name": "Manager",
-            "wins": "W",
-            "losses": "L",
-            "points_for": st.column_config.NumberColumn("Total PF", format="%.1f"),
-            "avg_points_per_week": st.column_config.NumberColumn(
-                "Avg/Week", format="%.2f"
-            ),
-            "luck_differential": st.column_config.NumberColumn("Luck +/-"),
-            "power_score": st.column_config.ProgressColumn(
-                "Power Score", format="%.3f", min_value=0, max_value=1
-            ),
-        },
-    )
 
 elif page == "🎯 Draft Analysis":
     st.header("🎯 Draft Performance Analysis")

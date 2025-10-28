@@ -1,0 +1,102 @@
+version: 2
+
+models:
+  - name: int_schedule_luck
+    description: >
+      Calculate schedule luck based on opponent strength timing.
+      Positive values indicate facing opponents during their hot weeks (unlucky).
+      Negative values indicate facing opponents during their cold weeks (lucky).
+    columns:
+      - name: roster_id
+        description: Unique identifier for the team
+        tests:
+          - not_null
+      - name: manager_name
+        description: Team manager name
+        tests:
+          - not_null
+      - name: week
+        description: Week number
+        tests:
+          - not_null
+      - name: schedule_luck_index
+        description: Average deviation of opponent performance vs their season average
+
+  - name: int_close_game_outcomes
+    description: >
+      Analyze close game outcomes (games decided by <10 points).
+      Close games are more influenced by luck/variance than blowouts.
+    columns:
+      - name: roster_id
+        description: Unique identifier for the team
+        tests:
+          - not_null
+      - name: manager_name
+        description: Team manager name
+        tests:
+          - not_null
+      - name: week
+        description: Week number
+        tests:
+          - not_null
+      - name: is_close_game
+        description: Flag indicating if game was decided by <10 points
+        tests:
+          - accepted_values:
+              values: [0, 1]
+      - name: close_win
+        description: Flag indicating close game win
+        tests:
+          - accepted_values:
+              values: [0, 1]
+      - name: close_loss
+        description: Flag indicating close game loss
+        tests:
+          - accepted_values:
+              values: [0, 1]
+      - name: close_game_win_pct
+        description: Win percentage in close games (NULL if no close games)
+
+  - name: int_wins_over_expected
+    description: >
+      Calculate all-play expected wins and wins over expected.
+      Uses the all-play methodology: if you played everyone each week, how many would you beat?
+      This is the core luck metric.
+    columns:
+      - name: roster_id
+        description: Unique identifier for the team
+        tests:
+          - not_null
+          - unique
+      - name: manager_name
+        description: Team manager name
+        tests:
+          - not_null
+      - name: actual_wins
+        description: Actual wins from head-to-head matchups
+        tests:
+          - not_null
+      - name: actual_losses
+        description: Actual losses from head-to-head matchups
+        tests:
+          - not_null
+      - name: expected_wins
+        description: Expected wins based on all-play win percentage
+        tests:
+          - not_null
+      - name: all_play_wins
+        description: Total wins if you played every team every week
+        tests:
+          - not_null
+      - name: all_play_games
+        description: Total all-play games (weeks × opponents)
+        tests:
+          - not_null
+      - name: all_play_win_pct
+        description: All-play win percentage
+        tests:
+          - not_null
+      - name: wins_over_expected
+        description: Actual wins minus expected wins (core luck metric)
+        tests:
+          - not_null

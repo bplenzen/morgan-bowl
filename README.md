@@ -10,7 +10,7 @@ A production-ready data pipeline that transforms raw fantasy football data into 
 
 Morgan Bowl automatically pulls data from your Sleeper fantasy football league and creates:
 
-- **📊 Interactive Dashboard**: Real-time standings, luck analysis, and power rankings
+- **📊 Interactive Dashboard**: Real-time standings and luck analysis
 - **🎯 Advanced Analytics**: Draft grades, injury impact, strength of schedule
 - **🤖 Automated Updates**: Weekly data refresh via GitLab CI/CD
 - **📈 Data Warehouse**: All your league history in a local DuckDB database
@@ -138,7 +138,6 @@ poetry run python scripts/generate_report.py --week 6
 |---------|-------------|--------|
 | **Standings** | Win/loss records, points for/against | ✅ v1.0 |
 | **Justice Record** | Luck analysis (who deserves their record?) | ✅ v1.0 |
-| **Power Rankings** | Combined wins + points + luck metric | ✅ v1.0 |
 | **Draft Analysis** | Pick value curves, draft grades | ✅ v1.2 |
 | **Injury Impact** | Games lost to injuries, VORP analysis | ✅ v1.2 |
 | **Luck Calibration** | Statistical validation of luck weights | ✅ v1.2 |
@@ -211,7 +210,7 @@ Sleeper API → Python Ingestion → DuckDB → DBT Models → Analytics
 
 3. **Analytics** (`dbt/models/marts/`):
    - Business logic and aggregations
-   - `fct_matchups`, `fct_standings`, `fct_justice_record`
+   - `fct_matchups`, `fct_standings`  # `fct_justice_record` deprecated, removed
    - `fct_draft_performance`, `fct_injury_impact`, `fct_advanced_luck`
 
 4. **Consumption**:
