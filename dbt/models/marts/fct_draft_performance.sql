@@ -1,7 +1,37 @@
 {{ config(materialized='table') }}
 
 /*
-Draft Performance Analysis - Context-Aware Grading
+Draft Performance Analysis - Context-Aware Grading with NO LOOK-AHEAD BIAS
+
+ANTI-LOOK-AHEAD METHODOLOGY:
+This model evaluates draft DECISIONS (process) not OUTCOMES (results).
+It uses FROZEN parameters from draft day (2025-09-04) to prevent look-ahead bias.
+
+DATA SEPARATION:
+1. DRAFT-DAY DECISIONS (used for grading):
+   - Preseason ADP rankings (via stg_preseason_rankings)
+   - Frozen replacement levels (via int_draft_day_baseline)
+   - Draft position and opportunity cost
+   - Frozen scarcity multipliers from draft day
+
+2. ACTUAL OUTCOMES (used for VOR calculation only):
+   - Current season performance (via int_current_player_rankings)
+   - Weekly variance and consistency metrics
+   - Games played and total points
+
+GRADING LOGIC:
+- Draft grades evaluate the QUALITY OF THE DECISION at draft time
+- VOR calculations use actual performance but FROZEN baselines
+- Replacement levels NEVER change (Jordan Love QB12, Najee Harris RB28, etc.)
+- No player stats from AFTER the draft date influence the grade assignment
+
+VERIFICATION:
+See tests/assert_no_lookahead_bias_draft.sql for validation that:
+- Baseline frozen_date = 2025-09-04
+- Replacement players match frozen parameters
+- Projection source = Preseason_ADP_Consensus_2025
+- Players with 0 games get F grades (no post-draft data used)
+
 Uses VOR (Value Over Replacement), positional scarcity, PPG-based performance,
 and draft context to grade picks. Accounts for the fact that late-round QB1
 is different value than late-round RB1 due to positional scarcity.

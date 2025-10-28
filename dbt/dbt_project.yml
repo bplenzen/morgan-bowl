@@ -29,6 +29,10 @@ models:
       +materialized: view
       tests:
         - assert_two_rosters_per_matchup
+    intermediate:
+      +schema: analytics
+      +materialized: ephemeral
+      +tags: ['intermediate']
     marts:
       +schema: analytics
       +materialized: table

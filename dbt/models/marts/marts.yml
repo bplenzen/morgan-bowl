@@ -2,76 +2,596 @@ version: 2
 
 models:
   - name: fct_matchups
-    description: "Fact table describing roster performance per matchup/week."
+    description: "Fact table describing roster performance per matchup/week. Contains head-to-head matchup results with point totals, win/loss flags, and opponent details."
+    meta:
+      owner: "analytics_team"
+      model_maturity: "production"
     columns:
       - name: week
+        description: "Week number of the NFL season"
         tests:
           - not_null
       - name: matchup_id
+        description: "Unique identifier for the matchup (same for both teams in H2H)"
         tests:
           - not_null
       - name: roster_id
+        description: "Unique roster identifier from Sleeper API"
         tests:
           - not_null
+          - relationships:
+              to: ref('stg_rosters')
+              field: roster_id
+      - name: owner_id
+        description: "User ID of the team owner"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_users')
+              field: user_id
+      - name: manager_name
+        description: "Display name of the team manager"
+        tests:
+          - not_null
+      - name: points
+        description: "Total points scored by this roster in this week"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: opponent_roster_id
+        description: "Roster ID of the opponent (can be null for bye weeks)"
+      - name: opponent_owner_id
+        description: "Owner ID of the opponent"
+      - name: opponent_manager_name
+        description: "Display name of opponent manager"
+      - name: opponent_points
+        description: "Total points scored by opponent"
+      - name: point_diff
+        description: "Points differential (points - opponent_points)"
       - name: win_flag
-        description: "1 if roster won the matchup, 0 if lost, null if opponent missing."
-  - name: fct_standings
-    description: "Aggregated standings metrics by roster and manager."
-    columns:
-      - name: roster_id
+        description: "1 if roster won the matchup, 0 if lost, null if opponent missing"
         tests:
-          - not_null
-          - unique
-      - name: wins
-        description: "Total wins counted from fct_matchups."
-      - name: losses
-        description: "Total losses counted from fct_matchups."
-      - name: win_pct
-        description: "Wins divided by games played."
+          - accepted_values:
+              values: [0, 1]
+              config:
+                where: "opponent_roster_id is not null"
 
-  - name: fct_justice_record
-    config:
-      enabled: false  # DEPRECATED Oct 2025 - disabled to save CI/CD time
-    description: "⚠️ DEPRECATED (Oct 2025): Replaced by fct_advanced_luck. Justice record (median wins) vs actual record to measure luck. Teams scoring above the weekly median earn 'justice wins'. Kept for backward compatibility."
+  - name: fct_standings
+    description: "Aggregated standings metrics by roster and manager. Season-level view of wins, losses, points for/against."
     meta:
-      deprecated: true
-      deprecated_date: "2025-10-19"
-      replaced_by: "fct_advanced_luck"
+      owner: "analytics_team"
+      model_maturity: "production"
     columns:
       - name: roster_id
+        description: "Unique roster identifier (primary key)"
         tests:
           - not_null
           - unique
-      - name: justice_wins
-        description: "Number of weeks scoring above the median (deserved wins)"
+          - relationships:
+              to: ref('stg_rosters')
+              field: roster_id
+      - name: owner_id
+        description: "User ID of the team owner"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_users')
+              field: user_id
+      - name: manager_name
+        description: "Display name of the team manager"
+        tests:
+          - not_null
+      - name: points_for
+        description: "Total points scored across all weeks"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: points_against
+        description: "Total points allowed across all weeks"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: wins
+        description: "Total wins counted from fct_matchups"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: losses
+        description: "Total losses counted from fct_matchups"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: games_played
+        description: "Total games with opponents"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "> 0"
+      - name: decisions
+        description: "Wins + losses (excludes bye weeks if any)"
+        tests:
+          - not_null
+      - name: win_pct
+        description: "Wins divided by games played"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+          - dbt_utils.expression_is_true:
+              expression: "<= 1"
+      - name: point_diff
+        description: "Points for - points against"
+        tests:
+          - not_null
+
+
+  - name: fct_advanced_luck
+    description: "Advanced luck analysis using multiple statistical approaches: all-play record, expected wins with Monte Carlo uncertainty quantification, schedule strength, close game performance, and composite luck score. Uses simplified formula (50 + wins_over_expected × 10) based on variance decomposition analysis showing wins_over_expected already captures total luck via all-play methodology."
+    meta:
+      owner: "analytics_team"
+      model_maturity: "production"
+      calibration_reference: "analysis/luck_weight_calibration.ipynb"
+    columns:
+      - name: roster_id
+        description: "Unique roster identifier (primary key)"
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              to: ref('fct_matchups')
+              field: roster_id
+          - relationships:
+              to: ref('fct_standings')
+              field: roster_id
+      - name: manager_name
+        description: "Display name of the team manager"
         tests:
           - not_null
       - name: actual_wins
-        description: "Actual head-to-head wins"
+        description: "Actual head-to-head wins from schedule"
         tests:
           - not_null
-      - name: luck_differential
-        description: "actual_wins - justice_wins. Positive = lucky, negative = unlucky"
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: actual_losses
+        description: "Actual head-to-head losses"
         tests:
           - not_null
-      - name: luck_status
-        description: "Human-readable luck interpretation"
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: expected_wins
+        description: "Projected wins based on all-play win percentage (if you played everyone each week)"
         tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: wins_over_expected
+        description: "Actual wins minus expected wins. Most sophisticated luck metric (positive = lucky schedule)"
+        tests:
+          - not_null
+      - name: expected_wins_p05
+        description: "5th percentile of expected wins distribution (Monte Carlo simulation)"
+      - name: expected_wins_p50
+        description: "50th percentile of expected wins (median)"
+      - name: expected_wins_p95
+        description: "95th percentile of expected wins distribution"
+      - name: expected_wins_ci_width
+        description: "Width of 90% confidence interval (p95 - p05)"
+      - name: expected_wins_std_error
+        description: "Standard error of expected wins estimate"
+      - name: wins_over_expected_p50
+        description: "Wins over expected using median estimate"
+      - name: wins_over_expected_lower
+        description: "Conservative luck estimate (actual - p95)"
+      - name: wins_over_expected_upper
+        description: "Optimistic luck estimate (actual - p05)"
+      - name: all_play_wins
+        description: "Total wins if you played every team every week"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: all_play_games
+        description: "Total possible all-play matchups"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "> 0"
+      - name: all_play_win_pct
+        description: "Percentage of all possible matchups you would have won"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+          - dbt_utils.expression_is_true:
+              expression: "<= 1"
+      - name: schedule_luck_index
+        description: "Average opponent performance vs their season avg (positive = unlucky, negative = lucky)"
+      - name: close_wins
+        description: "Wins in games decided by <10 points"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: close_losses
+        description: "Losses in games decided by <10 points"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: total_close_games
+        description: "Total games decided by <10 points"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: close_game_win_pct
+        description: "Win percentage in close games (can be null if no close games)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "close_game_win_pct is not null"
+          - dbt_utils.expression_is_true:
+              expression: "<= 1"
+              config:
+                where: "close_game_win_pct is not null"
+      - name: points_stddev
+        description: "Standard deviation of weekly point totals (consistency metric)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: avg_points
+        description: "Average points per week"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "> 0"
+      - name: points_range
+        description: "Max points - min points (consistency metric)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: composite_luck_score
+        description: "0-100 scale combining luck factors. 50 = average, >50 = lucky, <50 = unlucky. Formula: 50 + (wins_over_expected × 10)"
+        tests:
+          - not_null
+      - name: schedule_difficulty
+        description: "Human-readable schedule difficulty rating"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Brutal Schedule', 'Tough Schedule', 'Average Schedule', 'Easy Schedule', 'Cupcake Schedule']
+      - name: luck_rating
+        description: "Human-readable overall luck assessment"
+        tests:
+          - not_null
           - accepted_values:
               values: ['VERY LUCKY', 'Lucky', 'Fair', 'Unlucky', 'VERY UNLUCKY']
 
-  - name: fct_advanced_luck
-    description: "Advanced luck analysis using multiple statistical approaches: all-play record, expected wins, schedule strength, close game performance, and composite luck score."
+  - name: fct_draft_performance
+    description: "Process-based draft grading using ONLY draft-day information (no look-ahead bias). Grades each pick based on value over replacement, positional scarcity, opportunity cost, and draft context frozen at draft time. Uses draft_day_parameters_2025.yml for replacement levels."
+    meta:
+      owner: "analytics_team"
+      model_maturity: "production"
+      methodology: "FROZEN draft-day baseline - never recalculates"
+      anti_lookahead: true
     columns:
-      - name: roster_id
+      - name: pick_no
+        description: "Draft pick number (primary key, 1-indexed)"
         tests:
           - not_null
           - unique
-      - name: expected_wins
-        description: "Projected wins based on all-play win percentage (if you played everyone each week)"
-      - name: wins_over_expected
-        description: "Actual wins minus expected wins. Most sophisticated luck metric."
-      - name: composite_luck_score
-        description: "0-100 scale combining multiple luck factors. 50 = average, >50 = lucky, <50 = unlucky"
-      - name: all_play_win_pct
-        description: "Percentage of all possible matchups you would have won"
+      - name: draft_id
+        description: "Unique identifier for the draft"
+        tests:
+          - not_null
+      - name: round
+        description: "Draft round number"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 1"
+      - name: draft_slot
+        description: "Position in draft order (1-12 for 12-team league)"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 1"
+          - dbt_utils.expression_is_true:
+              expression: "<= 12"
+      - name: roster_id
+        description: "Unique roster identifier"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_rosters')
+              field: roster_id
+      - name: owner_id
+        description: "User ID of the team owner"
+        tests:
+          - relationships:
+              to: ref('stg_users')
+              field: user_id
+      - name: manager_name
+        description: "Display name of the team manager"
+      - name: player_id
+        description: "Unique player identifier"
+        tests:
+          - not_null
+      - name: player_name
+        description: "Player full name"
+        tests:
+          - not_null
+      - name: position
+        description: "Player position (QB, RB, WR, TE)"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']
+      - name: team
+        description: "NFL team abbreviation"
+      - name: draft_tier
+        description: "Draft round context tier"
+        tests:
+          - accepted_values:
+              values: ['Elite (Round 1)', 'High Value (Round 2)', 'Solid (Round 3)', 'Mid Round (4-5)', 'Late Round (6-8)', 'Deep Sleeper (9+)']
+      - name: preseason_rank_overall
+        description: "Overall rank in preseason rankings"
+      - name: preseason_rank_position
+        description: "Position rank in preseason rankings"
+      - name: preseason_adp
+        description: "Average draft position from preseason data"
+      - name: current_rank_overall
+        description: "Current overall rank (for outcome comparison only)"
+      - name: current_rank_position
+        description: "Current position rank (for outcome comparison only)"
+      - name: total_points
+        description: "Total fantasy points scored"
+      - name: points_per_game
+        description: "Average points per game"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "points_per_game is not null"
+      - name: games_played
+        description: "Total games played"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "games_played is not null"
+      - name: pick_grade
+        description: "Letter grade for draft pick quality (A+ to F)"
+        tests:
+          - not_null
+      - name: grade_score
+        description: "Numeric grade score with uncertainty bounds (0-100 scale)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "grade_score is not null"
+          - dbt_utils.expression_is_true:
+              expression: "<= 100"
+              config:
+                where: "grade_score is not null"
+      - name: value_verdict
+        description: "Human-readable assessment of pick value (can be null if data incomplete)"
+
+  - name: fct_draft_realized_value
+    description: "Outcome-based draft analysis showing actual player value vs draft position. Uses CURRENT season performance (updates weekly). This is separate from fct_draft_performance: process grades vs outcome value. Good process can have bad luck, bad process can get lucky."
+    meta:
+      owner: "analytics_team"
+      model_maturity: "production"
+      methodology: "Dynamic - recalculates with current performance"
+      relationship_to_draft_performance: "Complementary outcome analysis"
+    columns:
+      - name: pick_no
+        description: "Draft pick number (primary key)"
+        tests:
+          - not_null
+          - unique
+      - name: player_id
+        description: "Unique player identifier"
+        tests:
+          - not_null
+      - name: player_name
+        description: "Player full name"
+        tests:
+          - not_null
+      - name: position
+        description: "Player position"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']
+      - name: round
+        description: "Draft round"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 1"
+      - name: draft_slot
+        description: "Draft slot position"
+        tests:
+          - not_null
+      - name: roster_id
+        description: "Unique roster identifier"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_rosters')
+              field: roster_id
+      - name: owner_id
+        description: "User ID of the team owner"
+        tests:
+          - relationships:
+              to: ref('stg_users')
+              field: user_id
+      - name: manager_name
+        description: "Display name of the team manager"
+      - name: points_per_game
+        description: "Actual PPG (current performance)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "points_per_game is not null"
+      - name: total_points
+        description: "Total fantasy points scored to date"
+      - name: games_played
+        description: "Games played so far"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "games_played is not null"
+      - name: current_rank_position
+        description: "Current rank within position"
+      - name: current_rank_overall
+        description: "Current overall rank"
+      - name: realized_vor
+        description: "Realized value over replacement (actual season performance)"
+      - name: total_points_above_replacement
+        description: "Total points above replacement level"
+      - name: actually_startable
+        description: "Boolean: is player performing above replacement level"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [true, false]
+      - name: actually_elite
+        description: "Boolean: is player top-5 at position"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [true, false]
+      - name: draft_tier
+        description: "Draft expectation tier"
+        tests:
+          - accepted_values:
+              values: ['EARLY (Elite Expected)', 'MID (Starter Expected)', 'LATE (Depth Expected)', 'VERY_LATE (Flyer)']
+      - name: outcome_grade
+        description: "Outcome-based grade (A+ to F)"
+        tests:
+          - not_null
+
+  - name: fct_draft_grades
+    description: "Team-level draft report cards aggregating pick grades from fct_draft_performance. Shows which teams drafted best using GPA calculation."
+    meta:
+      owner: "analytics_team"
+      model_maturity: "production"
+      data_source: "fct_draft_performance"
+    columns:
+      - name: roster_id
+        description: "Unique roster identifier (primary key)"
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              to: ref('fct_draft_performance')
+              field: roster_id
+      - name: manager_name
+        description: "Display name of the team manager"
+        tests:
+          - not_null
+      - name: total_picks
+        description: "Total number of draft picks made"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "> 0"
+      - name: a_grades
+        description: "Count of A-range grades"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: b_grades
+        description: "Count of B-range grades"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: c_grades
+        description: "Count of C-range grades"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: d_grades
+        description: "Count of D-range grades"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: f_grades
+        description: "Count of F-range grades"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: ungraded
+        description: "Count of ungraded picks (inactive, unranked)"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: total_draft_points
+        description: "Total fantasy points from all draft picks"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "total_draft_points is not null"
+      - name: avg_points_per_pick
+        description: "Average points per draft pick"
+      - name: top_36_picks
+        description: "Number of picks in top 36 overall"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: starter_quality_picks
+        description: "Number of picks producing starter-quality returns"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: best_pick_points
+        description: "Points from best pick"
+      - name: worst_pick_points
+        description: "Points from worst pick"
+      - name: early_round_hits
+        description: "A-grades in rounds 1-3"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: early_round_misses
+        description: "D/F grades in rounds 1-3"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: late_round_gems
+        description: "A-grades in rounds 10+"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: gpa
+        description: "Grade Point Average (4.0 scale)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "gpa is not null"
+          - dbt_utils.expression_is_true:
+              expression: "<= 4.0"
+              config:
+                where: "gpa is not null"
+      - name: overall_draft_grade
+        description: "Overall letter grade for draft performance"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'F', 'INCOMPLETE']
