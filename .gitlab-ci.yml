@@ -161,19 +161,7 @@ commit:data:
     - git pull origin main
     - cp -f /tmp/warehouse.duckdb.artifact data/warehouse.duckdb
     - git add data/warehouse.duckdb
-    - |
-      if git diff --staged --quiet; then
-        echo "ℹ️ No changes to database, skipping commit"
-      else
-        git commit -m "data: Weekly ingestion update $(date +%Y-%m-%d)
-
-        Automated data update from GitLab CI/CD pipeline
-        - Updated warehouse.duckdb with latest Sleeper data
-        - Pipeline: $CI_PIPELINE_URL
-        - Triggered: $CI_PIPELINE_SOURCE"
-        git push https://oauth2:${GITLAB_PUSH_TOKEN}@gitlab.com/bplenzen/morgan-bowl.git HEAD:main
-        echo "✅ Successfully pushed updated data to GitLab"
-      fi
+    - "if git diff --staged --quiet; then echo 'No changes to database, skipping commit'; else git commit -m \"data: Weekly ingestion update $(date +%Y-%m-%d)\" -m \"Automated data update from GitLab CI/CD pipeline\" -m \"Updated warehouse.duckdb with latest Sleeper data\" -m \"Pipeline: $CI_PIPELINE_URL\" -m \"Triggered: $CI_PIPELINE_SOURCE\" && git push https://oauth2:${GITLAB_PUSH_TOKEN}@gitlab.com/bplenzen/morgan-bowl.git HEAD:main && echo 'Successfully pushed updated data to GitLab'; fi"
   needs:
     - ingest:weekly
     - test:dbt
