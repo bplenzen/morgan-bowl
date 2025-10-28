@@ -154,18 +154,13 @@ commit:data:
     - apk add --no-cache git
     - git config user.email "ci@morgan-bowl.pipeline"
     - git config user.name "Morgan Bowl CI/CD"
-    # Verify artifact was downloaded and save it (git pull will overwrite it)
     - ls -lh data/warehouse.duckdb || echo "⚠️ WARNING: warehouse.duckdb not found in artifacts!"
     - cp -f data/warehouse.duckdb /tmp/warehouse.duckdb.artifact
-    # Fetch latest to avoid conflicts
     - git fetch origin main
     - git checkout main
     - git pull origin main
-    # Restore the artifact database (git pull overwrote it with old version)
     - cp -f /tmp/warehouse.duckdb.artifact data/warehouse.duckdb
-    # Stage the updated database
     - git add data/warehouse.duckdb
-    # Only commit if there are changes
     - |
       if git diff --staged --quiet; then
         echo "ℹ️ No changes to database, skipping commit"
