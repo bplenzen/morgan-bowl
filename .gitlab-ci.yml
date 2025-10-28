@@ -150,18 +150,18 @@ commit:data:
   stage: deploy
   image: alpine/git:latest
   script:
-    - echo "📝 Committing updated data to repository..."
+    - echo "Committing updated data to repository"
     - apk add --no-cache git
     - git config user.email "ci@morgan-bowl.pipeline"
     - git config user.name "Morgan Bowl CI/CD"
-    - ls -lh data/warehouse.duckdb || echo "⚠️ WARNING: warehouse.duckdb not found in artifacts!"
-    - cp -f data/warehouse.duckdb /tmp/warehouse.duckdb.artifact
+    - cp -f data/warehouse.duckdb /tmp/db.backup
     - git fetch origin main
     - git checkout main
     - git pull origin main
-    - cp -f /tmp/warehouse.duckdb.artifact data/warehouse.duckdb
+    - cp -f /tmp/db.backup data/warehouse.duckdb
     - git add data/warehouse.duckdb
-    - git diff --staged --quiet && echo "No changes to database" || (git commit -m "data:Weekly update $(date +%Y-%m-%d)" && git push https://oauth2:${GITLAB_PUSH_TOKEN}@gitlab.com/bplenzen/morgan-bowl.git HEAD:main)
+    - git diff --staged --quiet && echo "No changes" || git commit -m "data update $(date +%Y-%m-%d)"
+    - git diff --staged --quiet || git push https://oauth2:${GITLAB_PUSH_TOKEN}@gitlab.com/bplenzen/morgan-bowl.git HEAD:main
   needs:
     - ingest:weekly
     - test:dbt
@@ -169,8 +169,7 @@ commit:data:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "web"
-  # when: manual  # Removed to make deploy automatic
-  allow_failure: true  # Don't block pipeline if commit fails
+  allow_failure: true
 
 # Job 7: Mirror to GitHub (for Streamlit Cloud deployment)
 # Streamlit Cloud only supports GitHub, so we auto-mirror all commits
