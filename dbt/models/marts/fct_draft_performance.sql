@@ -309,6 +309,15 @@ draft_with_grades as (
         -- FINAL GRADE: Combines risk-adjusted VOR, draft context, and opportunity cost
         -- Uses risk-adjusted scarcity VOR as primary value metric
         case
+            -- K/DEF: Low positional scarcity (~3-4 PPG gap K1→K12, DEF1→DEF12)
+            -- Opportunity cost analysis: Even K1 in R9 (87 pts) < RB/WR/TE VOR (30-50)
+            -- Grade by draft timing only (streaming positions = performance irrelevant)
+            when position in ('K', 'DEF') and round <= 12 then 'F (Wasted Pick)'
+            when position in ('K', 'DEF') and round <= 14
+                then 'D (Too Early - Stream Instead)'
+            when position in ('K', 'DEF')
+                then 'B (Appropriate Timing)'
+
             -- INACTIVE/INJURED players
             when games_played = 0 or games_played is null then 'F (INACTIVE)'
 
@@ -524,6 +533,14 @@ draft_with_grades as (
 
         -- COMPREHENSIVE VALUE VERDICT: Explains the full story
         case
+            -- K/DEF verdicts: round-based only (no VOR for streaming positions)
+            when position in ('K', 'DEF') and round <= 12
+                then 'Major reach - K/DEF have low scarcity (only ~3-4 PPG gap from best to worst)'
+            when position in ('K', 'DEF') and round <= 14
+                then 'Drafted too early - should wait until final rounds for streaming positions'
+            when position in ('K', 'DEF')
+                then 'Appropriate timing for streaming position'
+
             when
                 games_played = 0 or games_played is null
                 then 'No games played - cannot evaluate'

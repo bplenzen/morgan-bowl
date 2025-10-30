@@ -22,6 +22,7 @@ projection_notes: |
 # These are FROZEN - calculated once using preseason rankings only
 # FLEX allocation: Greedy algorithm sorting by ADP (best available players first)
 # Results: 4 of 12 FLEX spots → RB, 8 of 12 FLEX spots → WR, 0 → TE
+# NOTE: K/DEF excluded - low scarcity (3-4 PPG gap #1→#12) makes VOR analysis meaningless for streaming positions
 replacement_levels:
   QB:
     rank: 12  # 12 teams × 1 QB

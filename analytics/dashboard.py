@@ -13,6 +13,24 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+# Position color mapping (Sleeper style - light transparent fills)
+POSITION_COLORS = {
+    "WR": "#E3F2FD",  # Light blue
+    "RB": "#E8F5E9",  # Light green
+    "QB": "#FFEBEE",  # Light red
+    "TE": "#FFF3E0",  # Light orange
+    "K": "#F3E5F5",  # Light purple
+    "DEF": "#EFEBE9",  # Light brown
+}
+
+
+def style_position_row(row):
+    """Apply background color to entire row based on position"""
+    position = row.get("position", "")
+    bg_color = POSITION_COLORS.get(position, "white")
+    return [f"background-color: {bg_color}" for _ in row]
+
+
 # Page config
 st.set_page_config(
     page_title="Morgan Bowl Analytics",
@@ -726,9 +744,15 @@ elif page == "🎯 Draft Analysis":
             # Add uncertainty toggle
             show_uncertainty = st.checkbox("Show Confidence Intervals", value=True)
 
+            # Create draft pick notation (e.g., 1.01, 2.12)
+            filtered_df = filtered_df.copy()
+            filtered_df["draft_pick"] = filtered_df.apply(
+                lambda row: f"{row['round']}.{((row['pick_no'] - 1) % 12) + 1:02d}",
+                axis=1,
+            )
+
             display_cols = [
-                "pick_no",
-                "round",
+                "draft_pick",
                 "player_name",
                 "position",
                 "manager_name",
@@ -739,16 +763,20 @@ elif page == "🎯 Draft Analysis":
 
             if show_uncertainty:
                 # Add uncertainty columns
-                display_cols.insert(6, "vor_uncertainty")
-                display_cols.insert(8, "grade_uncertainty")
+                display_cols.insert(5, "vor_uncertainty")
+                display_cols.insert(7, "grade_uncertainty")
+
+            # Apply position-based row coloring
+            styled_df = filtered_df[display_cols].style.apply(
+                style_position_row, axis=1
+            )
 
             st.dataframe(
-                filtered_df[display_cols],
+                styled_df,
                 use_container_width=True,
                 hide_index=True,
                 column_config={
-                    "pick_no": "Pick",
-                    "round": "Rd",
+                    "draft_pick": "Pick",
                     "player_name": "Player",
                     "position": "Pos",
                     "manager_name": "Manager",
@@ -771,20 +799,21 @@ elif page == "🎯 Draft Analysis":
             with col1:
                 st.subheader("🏆 Best Picks")
                 best = filtered_df.nlargest(5, "grade_score")
+                best_cols = [
+                    "draft_pick",
+                    "player_name",
+                    "position",
+                    "pick_grade",
+                    "adj_vor",
+                    "grade_uncertainty",
+                ]
                 st.dataframe(
-                    best[
-                        [
-                            "player_name",
-                            "round",
-                            "pick_grade",
-                            "adj_vor",
-                            "grade_uncertainty",
-                        ]
-                    ],
+                    best[best_cols].style.apply(style_position_row, axis=1),
                     hide_index=True,
                     column_config={
+                        "draft_pick": "Pick",
                         "player_name": "Player",
-                        "round": "Round",
+                        "position": "Pos",
                         "pick_grade": "Grade",
                         "adj_vor": st.column_config.NumberColumn(
                             "Adj VOR", format="%.1f"
@@ -798,20 +827,21 @@ elif page == "🎯 Draft Analysis":
         with col2:
             st.subheader("💔 Worst Picks")
             worst = filtered_df.nsmallest(5, "grade_score")
+            worst_cols = [
+                "draft_pick",
+                "player_name",
+                "position",
+                "pick_grade",
+                "adj_vor",
+                "grade_uncertainty",
+            ]
             st.dataframe(
-                worst[
-                    [
-                        "player_name",
-                        "round",
-                        "pick_grade",
-                        "adj_vor",
-                        "grade_uncertainty",
-                    ]
-                ],
+                worst[worst_cols].style.apply(style_position_row, axis=1),
                 hide_index=True,
                 column_config={
+                    "draft_pick": "Pick",
                     "player_name": "Player",
-                    "round": "Round",
+                    "position": "Pos",
                     "pick_grade": "Grade",
                     "adj_vor": st.column_config.NumberColumn("Adj VOR", format="%.1f"),
                     "grade_uncertainty": st.column_config.NumberColumn(
@@ -896,18 +926,19 @@ elif page == "🎯 Draft Analysis":
                 with col1:
                     st.subheader("🎯 Most Certain (Narrow CI)")
                     certain = with_uncertainty.nsmallest(5, "vor_uncertainty")
+                    certain_cols = [
+                        "player_name",
+                        "position",
+                        "adj_vor",
+                        "vor_uncertainty",
+                        "consistency_tier",
+                    ]
                     st.dataframe(
-                        certain[
-                            [
-                                "player_name",
-                                "adj_vor",
-                                "vor_uncertainty",
-                                "consistency_tier",
-                            ]
-                        ],
+                        certain[certain_cols].style.apply(style_position_row, axis=1),
                         hide_index=True,
                         column_config={
                             "player_name": "Player",
+                            "position": "Pos",
                             "adj_vor": st.column_config.NumberColumn(
                                 "VOR", format="%.1f"
                             ),
@@ -921,18 +952,21 @@ elif page == "🎯 Draft Analysis":
                 with col2:
                     st.subheader("🎲 Most Uncertain (Wide CI)")
                     uncertain = with_uncertainty.nlargest(5, "vor_uncertainty")
+                    uncertain_cols = [
+                        "player_name",
+                        "position",
+                        "adj_vor",
+                        "vor_uncertainty",
+                        "consistency_tier",
+                    ]
                     st.dataframe(
-                        uncertain[
-                            [
-                                "player_name",
-                                "adj_vor",
-                                "vor_uncertainty",
-                                "consistency_tier",
-                            ]
-                        ],
+                        uncertain[uncertain_cols].style.apply(
+                            style_position_row, axis=1
+                        ),
                         hide_index=True,
                         column_config={
                             "player_name": "Player",
+                            "position": "Pos",
                             "adj_vor": st.column_config.NumberColumn(
                                 "VOR", format="%.1f"
                             ),
@@ -1006,20 +1040,21 @@ elif page == "🎯 Draft Analysis":
                 with col1:
                     st.subheader("💎 Biggest Steals")
                     steals = active_picks.nlargest(5, "value_vs_expected")
+                    steals_cols = [
+                        "draft_pick",
+                        "player_name",
+                        "position",
+                        "expected_vor",
+                        "adj_vor",
+                        "value_vs_expected",
+                    ]
                     st.dataframe(
-                        steals[
-                            [
-                                "pick_no",
-                                "player_name",
-                                "expected_vor",
-                                "adj_vor",
-                                "value_vs_expected",
-                            ]
-                        ],
+                        steals[steals_cols].style.apply(style_position_row, axis=1),
                         hide_index=True,
                         column_config={
-                            "pick_no": "Pick",
+                            "draft_pick": "Pick",
                             "player_name": "Player",
+                            "position": "Pos",
                             "expected_vor": st.column_config.NumberColumn(
                                 "Expected", format="%.1f"
                             ),
@@ -1035,20 +1070,21 @@ elif page == "🎯 Draft Analysis":
                 with col2:
                     st.subheader("📉 Biggest Reaches")
                     reaches = active_picks.nsmallest(5, "value_vs_expected")
+                    reaches_cols = [
+                        "draft_pick",
+                        "player_name",
+                        "position",
+                        "expected_vor",
+                        "adj_vor",
+                        "value_vs_expected",
+                    ]
                     st.dataframe(
-                        reaches[
-                            [
-                                "pick_no",
-                                "player_name",
-                                "expected_vor",
-                                "adj_vor",
-                                "value_vs_expected",
-                            ]
-                        ],
+                        reaches[reaches_cols].style.apply(style_position_row, axis=1),
                         hide_index=True,
                         column_config={
-                            "pick_no": "Pick",
+                            "draft_pick": "Pick",
                             "player_name": "Player",
+                            "position": "Pos",
                             "expected_vor": st.column_config.NumberColumn(
                                 "Expected", format="%.1f"
                             ),
