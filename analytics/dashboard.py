@@ -179,6 +179,7 @@ def load_draft_performance(_db_mtime):
                 round,
                 player_name,
                 position,
+                current_rank_position,
                 manager_name,
                 round(value_over_replacement, 1) as vor,
                 round(risk_adjusted_scarcity_vor, 1) as adj_vor,
@@ -847,11 +848,35 @@ elif page == "🎯 Draft Analysis":
             axis=1,
         )
 
+        # Format position with inline rank (e.g., WR3, RB12)
+        def format_position_with_rank(row):
+            """Format position with inline rank, handling edge cases"""
+            position = row["position"]
+            rank = row["current_rank_position"]
+            games_played = row["games_played"]
+
+            # K/DEF: No ranking (streaming positions)
+            if position in ("K", "DEF"):
+                return position
+
+            # Inactive players or missing rank data
+            if games_played == 0 or pd.isna(rank):
+                return f"{position}(NR)"
+
+            # Standard format: WR3, RB12, etc.
+            return f"{position}{int(rank)}"
+
+        filtered_df["position_display"] = filtered_df.apply(
+            format_position_with_rank, axis=1
+        )
+
         # Simple view: Just the essentials
+        # Note: Keep "position" for styling, display "position_display" to user
         display_cols = [
             "draft_pick",
             "player_name",
             "position",
+            "position_display",
             "manager_name",
             "pick_grade",
             "value_verdict",
@@ -859,9 +884,11 @@ elif page == "🎯 Draft Analysis":
 
         # Advanced view: Add technical stats
         if show_uncertainty:
-            display_cols.insert(4, "adj_vor")  # After manager_name
-            display_cols.insert(5, "vor_uncertainty")  # After adj_vor
-            display_cols.insert(7, "grade_uncertainty")  # After pick_grade
+            display_cols.insert(
+                5, "adj_vor"
+            )  # After manager_name (adjusted for extra col)
+            display_cols.insert(6, "vor_uncertainty")  # After adj_vor
+            display_cols.insert(8, "grade_uncertainty")  # After pick_grade
 
         # Apply position-based row coloring
         styled_df = filtered_df[display_cols].style.apply(style_position_row, axis=1)
@@ -870,7 +897,8 @@ elif page == "🎯 Draft Analysis":
         column_config = {
             "draft_pick": "Pick",
             "player_name": "Player",
-            "position": "Pos",
+            "position": None,  # Hide raw position column
+            "position_display": "Pos",  # Show formatted position
             "manager_name": "Manager",
             "pick_grade": "Grade",
             "value_verdict": "Verdict",
@@ -906,6 +934,7 @@ elif page == "🎯 Draft Analysis":
                 "draft_pick",
                 "player_name",
                 "position",
+                "position_display",
                 "pick_grade",
                 "adj_vor",
                 "grade_uncertainty",
@@ -916,7 +945,8 @@ elif page == "🎯 Draft Analysis":
                 column_config={
                     "draft_pick": "Pick",
                     "player_name": "Player",
-                    "position": "Pos",
+                    "position": None,  # Hide for styling
+                    "position_display": "Pos",  # Show formatted
                     "pick_grade": "Grade",
                     "adj_vor": st.column_config.NumberColumn("Adj VOR", format="%.1f"),
                     "grade_uncertainty": st.column_config.NumberColumn(
@@ -932,6 +962,7 @@ elif page == "🎯 Draft Analysis":
                 "draft_pick",
                 "player_name",
                 "position",
+                "position_display",
                 "pick_grade",
                 "adj_vor",
                 "grade_uncertainty",
@@ -942,7 +973,8 @@ elif page == "🎯 Draft Analysis":
                 column_config={
                     "draft_pick": "Pick",
                     "player_name": "Player",
-                    "position": "Pos",
+                    "position": None,  # Hide for styling
+                    "position_display": "Pos",  # Show formatted
                     "pick_grade": "Grade",
                     "adj_vor": st.column_config.NumberColumn("Adj VOR", format="%.1f"),
                     "grade_uncertainty": st.column_config.NumberColumn(
@@ -1028,6 +1060,7 @@ elif page == "🎯 Draft Analysis":
                 certain_cols = [
                     "player_name",
                     "position",
+                    "position_display",
                     "adj_vor",
                     "vor_uncertainty",
                     "consistency_tier",
@@ -1037,7 +1070,8 @@ elif page == "🎯 Draft Analysis":
                     hide_index=True,
                     column_config={
                         "player_name": "Player",
-                        "position": "Pos",
+                        "position": None,  # Hide for styling
+                        "position_display": "Pos",  # Show formatted
                         "adj_vor": st.column_config.NumberColumn("VOR", format="%.1f"),
                         "vor_uncertainty": st.column_config.NumberColumn(
                             "Uncertainty", format="%.1f"
@@ -1052,6 +1086,7 @@ elif page == "🎯 Draft Analysis":
                 uncertain_cols = [
                     "player_name",
                     "position",
+                    "position_display",
                     "adj_vor",
                     "vor_uncertainty",
                     "consistency_tier",
@@ -1061,7 +1096,8 @@ elif page == "🎯 Draft Analysis":
                     hide_index=True,
                     column_config={
                         "player_name": "Player",
-                        "position": "Pos",
+                        "position": None,  # Hide for styling
+                        "position_display": "Pos",  # Show formatted
                         "adj_vor": st.column_config.NumberColumn("VOR", format="%.1f"),
                         "vor_uncertainty": st.column_config.NumberColumn(
                             "Uncertainty", format="%.1f"
@@ -1137,6 +1173,7 @@ elif page == "🎯 Draft Analysis":
                     "draft_pick",
                     "player_name",
                     "position",
+                    "position_display",
                     "expected_vor",
                     "adj_vor",
                     "value_vs_expected",
@@ -1147,7 +1184,8 @@ elif page == "🎯 Draft Analysis":
                     column_config={
                         "draft_pick": "Pick",
                         "player_name": "Player",
-                        "position": "Pos",
+                        "position": None,  # Hide for styling
+                        "position_display": "Pos",  # Show formatted
                         "expected_vor": st.column_config.NumberColumn(
                             "Expected", format="%.1f"
                         ),
@@ -1167,6 +1205,7 @@ elif page == "🎯 Draft Analysis":
                     "draft_pick",
                     "player_name",
                     "position",
+                    "position_display",
                     "expected_vor",
                     "adj_vor",
                     "value_vs_expected",
@@ -1177,7 +1216,8 @@ elif page == "🎯 Draft Analysis":
                     column_config={
                         "draft_pick": "Pick",
                         "player_name": "Player",
-                        "position": "Pos",
+                        "position": None,  # Hide for styling
+                        "position_display": "Pos",  # Show formatted
                         "expected_vor": st.column_config.NumberColumn(
                             "Expected", format="%.1f"
                         ),
@@ -1223,7 +1263,7 @@ elif page == "🎯 Draft Analysis":
                 filtered_df[
                     [
                         "player_name",
-                        "position",
+                        "position_display",
                         "vor",
                         "adj_vor",
                         "consistency_tier",
@@ -1234,7 +1274,7 @@ elif page == "🎯 Draft Analysis":
                 hide_index=True,
                 column_config={
                     "player_name": "Player",
-                    "position": "Pos",
+                    "position_display": "Pos",
                     "vor": st.column_config.NumberColumn("Raw VOR", format="%.1f"),
                     "adj_vor": st.column_config.NumberColumn(
                         "Risk-Adjusted VOR", format="%.1f"
