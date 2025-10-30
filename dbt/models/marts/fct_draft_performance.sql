@@ -309,14 +309,9 @@ draft_with_grades as (
         -- FINAL GRADE: Combines risk-adjusted VOR, draft context, and opportunity cost
         -- Uses risk-adjusted scarcity VOR as primary value metric
         case
-            -- K/DEF: Low positional scarcity (~3-4 PPG gap K1→K12, DEF1→DEF12)
-            -- Opportunity cost analysis: Even K1 in R9 (87 pts) < RB/WR/TE VOR (30-50)
-            -- Grade by draft timing only (streaming positions = performance irrelevant)
-            when position in ('K', 'DEF') and round <= 12 then 'F (Wasted Pick)'
-            when position in ('K', 'DEF') and round <= 14
-                then 'D (Too Early - Stream Instead)'
-            when position in ('K', 'DEF')
-                then 'B (Appropriate Timing)'
+            -- K/DEF: No grade - streaming positions not evaluated for draft quality
+            -- They break VOR-based grading due to near-zero positional scarcity
+            when position in ('K', 'DEF') then NULL
 
             -- INACTIVE/INJURED players
             when games_played = 0 or games_played is null then 'F (INACTIVE)'
@@ -462,6 +457,7 @@ draft_with_grades as (
         -- GRADE SCORE (0-100): Numeric grade for analysis
         -- Based on risk-adjusted scarcity VOR relative to draft position
         case
+            when position in ('K', 'DEF') then NULL  -- Streaming positions not graded
             when games_played = 0 or games_played is null then 0
             when risk_adjusted_scarcity_vor is null then 50  -- Default
             -- Scale based on round expectations
@@ -486,6 +482,7 @@ draft_with_grades as (
         -- GRADE SCORE CONFIDENCE INTERVAL (using VOR uncertainty)
         -- Lower bound: pessimistic grade (if no uncertainty data, use point estimate)
         case
+            when position in ('K', 'DEF') then NULL  -- Streaming positions not graded
             when games_played = 0 or games_played is null then 0
             when risk_adjusted_vor_lower_bound is null then
                 -- No uncertainty data - use the point estimate itself
@@ -506,6 +503,7 @@ draft_with_grades as (
 
         -- Upper bound: optimistic grade (if no uncertainty data, use point estimate)
         case
+            when position in ('K', 'DEF') then NULL  -- Streaming positions not graded
             when games_played = 0 or games_played is null then 0
             when risk_adjusted_vor_upper_bound is null then
                 -- No uncertainty data - use the point estimate itself
@@ -526,6 +524,7 @@ draft_with_grades as (
 
         -- Grade uncertainty (width of confidence interval)
         case
+            when position in ('K', 'DEF') then NULL  -- Streaming positions not graded
             when vor_uncertainty_range is not null and vor_uncertainty_range > 0
                 then round(vor_uncertainty_range / 2.0, 1)  -- ±range around point estimate
             else 0.0
@@ -533,13 +532,8 @@ draft_with_grades as (
 
         -- COMPREHENSIVE VALUE VERDICT: Explains the full story
         case
-            -- K/DEF verdicts: round-based only (no VOR for streaming positions)
-            when position in ('K', 'DEF') and round <= 12
-                then 'Major reach - K/DEF have low scarcity (only ~3-4 PPG gap from best to worst)'
-            when position in ('K', 'DEF') and round <= 14
-                then 'Drafted too early - should wait until final rounds for streaming positions'
-            when position in ('K', 'DEF')
-                then 'Appropriate timing for streaming position'
+            -- K/DEF: No verdict - streaming positions not graded
+            when position in ('K', 'DEF') then NULL
 
             when
                 games_played = 0 or games_played is null

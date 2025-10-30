@@ -364,9 +364,11 @@ models:
               config:
                 where: "games_played is not null"
       - name: pick_grade
-        description: "Letter grade for draft pick quality (A+ to F)"
+        description: "Letter grade for draft pick quality (A+ to F, NULL for K/DEF)"
         tests:
-          - not_null
+          - not_null:
+              config:
+                where: "position NOT IN ('K', 'DEF')"
       - name: grade_score
         description: "Numeric grade score with uncertainty bounds (0-100 scale)"
         tests:
