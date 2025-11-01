@@ -1,13 +1,25 @@
 {{ config(materialized='table') }}
 
--- Monte Carlo simulation for expected wins uncertainty quantification
--- Approach: Simulate N random schedules per team, calculate wins distribution
--- Output: p05, p50, p95 percentiles for expected wins with confidence intervals
+/*
+Expected Wins Uncertainty Quantification
 
--- Design Notes:
--- - We can't easily do 5000 true random simulations in SQL
--- - Alternative: Use weekly scores to estimate variance via bootstrap-like method
--- - Calculate expected wins distribution based on score variance + opponent variance
+Uses Wilson score intervals (binomial confidence intervals) to estimate
+uncertainty in expected wins calculations.
+
+Methodology: Closed-form binomial CI (NOT Monte Carlo simulation)
+- Point estimate: All-play win percentage × games played
+- Confidence interval: Wilson score method (handles small samples better than normal approximation)
+- Output: p05, p50, p95 percentiles with standard error
+
+Why Wilson score instead of normal approximation?
+- Handles small sample sizes (n < 30) correctly
+- Prevents invalid CIs (won't go below 0 wins or above n games)
+- Symmetric for p ≈ 0.5, adjusts for extreme probabilities
+- Industry standard for binomial proportions (Brown et al. 2001)
+
+Note: This model was previously named "Monte Carlo" but that was misleading.
+There is no random sampling or simulation - just a closed-form statistical formula.
+*/
 
 with weekly_matchups as (
     select

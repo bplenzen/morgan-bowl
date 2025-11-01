@@ -1,4 +1,4 @@
--- Test: Monte Carlo expected wins uncertainty intervals are reasonable
+-- Test: Expected wins uncertainty intervals are reasonable (Wilson score method)
 -- Validates that:
 -- 1. CI width is proportional to uncertainty (more games = tighter CI)
 -- 2. p05 < p50 < p95 (proper ordering)
@@ -37,7 +37,7 @@ with uncertainty_checks as (
             when expected_wins_std_error > 1.5 then 'std_error too large'
         end as std_error_violation
 
-    from {{ ref('int_monte_carlo_expected_wins') }}
+    from {{ ref('int_expected_wins_uncertainty') }}
 )
 
 -- Test FAILS if any violations detected

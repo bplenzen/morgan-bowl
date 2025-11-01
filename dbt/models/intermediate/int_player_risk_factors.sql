@@ -138,13 +138,14 @@ risk_adjusted_vor as (
                         - coalesce((
                             select points_per_game
                             from current_rankings
-                            where position = prc.position
-                              and current_rank_position = (
-                                  select replacement_rank
-                                  from draft_day_baseline
-                                  where position = prc.position
-                                  limit 1
-                              )
+                            where
+                                position = prc.position
+                                and current_rank_position = (
+                                    select replacement_rank
+                                    from draft_day_baseline
+                                    where position = prc.position
+                                    limit 1
+                                )
                         ), 0)
                     ) * prc.games_played
             else 0
@@ -180,6 +181,8 @@ final_risk_adjusted as (
 
         -- Risk tier categorization
         case
+            -- Elite reliability
+            when composite_risk_factor >= 0.95 then 'VERY_LOW_RISK'
             -- Very reliable
             when composite_risk_factor >= 0.90 then 'LOW_RISK'
             -- Some concerns
@@ -236,13 +239,14 @@ with_uncertainty as (
                         - coalesce((
                             select points_per_game
                             from current_rankings
-                            where position = fra.position
-                              and current_rank_position = (
-                                  select replacement_rank
-                                  from draft_day_baseline
-                                  where position = fra.position
-                                  limit 1
-                              )
+                            where
+                                position = fra.position
+                                and current_rank_position = (
+                                    select replacement_rank
+                                    from draft_day_baseline
+                                    where position = fra.position
+                                    limit 1
+                                )
                         ), 0)
                     )
                     * fra.games_played
@@ -272,13 +276,14 @@ with_uncertainty as (
                         - coalesce((
                             select points_per_game
                             from current_rankings
-                            where position = fra.position
-                              and current_rank_position = (
-                                  select replacement_rank
-                                  from draft_day_baseline
-                                  where position = fra.position
-                                  limit 1
-                              )
+                            where
+                                position = fra.position
+                                and current_rank_position = (
+                                    select replacement_rank
+                                    from draft_day_baseline
+                                    where position = fra.position
+                                    limit 1
+                                )
                         ), 0)
                     )
                     * fra.games_played

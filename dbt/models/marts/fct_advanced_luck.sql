@@ -145,7 +145,7 @@ final as (
 
     from wins_over_expected as woe
     left join
-        {{ ref('int_monte_carlo_expected_wins') }} as mc
+        {{ ref('int_expected_wins_uncertainty') }} as mc
         on woe.roster_id = mc.roster_id and woe.manager_name = mc.manager_name
     left join
         schedule_luck as sl
