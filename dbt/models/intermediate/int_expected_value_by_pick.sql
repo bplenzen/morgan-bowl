@@ -36,6 +36,10 @@ draft_day_baseline as (
     select * from {{ ref('int_draft_day_baseline') }}
 ),
 
+historical_ppg_by_rank as (
+    select * from {{ ref('int_historical_ppg_by_rank') }}
+),
+
 -- Get replacement levels from frozen baseline
 replacement_levels as (
     select
@@ -54,57 +58,35 @@ replacement_levels as (
     from draft_day_baseline
 ),
 
--- Estimate preseason projected PPG from ADP tiers
--- (In production, you'd load actual projections from FantasyPros)
--- This is a rough approximation based on historical ADP/production correlation
+-- Estimate preseason projected PPG using historical averages by rank
+-- This uses actual season performance data to build more realistic estimates
+-- than hardcoded tiers. Still an approximation until FantasyPros API (task #16)
 preseason_with_projected_ppg as (
     select
         pr.*,
         rl.estimated_replacement_ppg,
         rl.scarcity_multiplier,
 
-        -- Rough PPG projection from ADP
-        -- Better would be actual expert projections
-        -- This decay curve approximates typical preseason projections
-        case
-            when pr.position = 'QB'
-                then
-                    case
-                        when pr.preseason_rank_position <= 5 then 22.0
-                        when pr.preseason_rank_position <= 12 then 20.0
-                        when pr.preseason_rank_position <= 20 then 18.0
-                        when pr.preseason_rank_position <= 30 then 16.0
-                        else 14.0
-                    end
-            when pr.position = 'RB'
-                then
-                    case
-                        when pr.preseason_rank_position <= 5 then 16.0
-                        when pr.preseason_rank_position <= 12 then 14.0
-                        when pr.preseason_rank_position <= 24 then 12.0
-                        when pr.preseason_rank_position <= 36 then 10.0
-                        else 8.0
-                    end
-            when pr.position = 'WR'
-                then
-                    case
-                        when pr.preseason_rank_position <= 5 then 15.0
-                        when pr.preseason_rank_position <= 12 then 13.0
-                        when pr.preseason_rank_position <= 24 then 11.5
-                        when pr.preseason_rank_position <= 36 then 10.0
-                        else 8.5
-                    end
-            when pr.position = 'TE' then
-                case
-                    when pr.preseason_rank_position <= 3 then 12.0
-                    when pr.preseason_rank_position <= 12 then 9.0
-                    when pr.preseason_rank_position <= 20 then 7.5
-                    else 6.0
-                end
-        end as projected_ppg
+        -- Use historical averages from actual performance data
+        -- Falls back to conservative estimates if no historical data available
+        coalesce(
+            hpr.smoothed_ppg,
+            -- Fallback to conservative position-based estimates
+            case
+                when pr.position = 'QB' then 18.0
+                when pr.position = 'RB' then 12.0
+                when pr.position = 'WR' then 11.0
+                when pr.position = 'TE' then 8.0
+            end
+        ) as projected_ppg
+
     from preseason_rankings as pr
     left join replacement_levels as rl
         on pr.position = rl.position
+    left join historical_ppg_by_rank as hpr
+        on
+            pr.position = hpr.position
+            and pr.preseason_rank_position = hpr.rank_position
 ),
 
 -- Calculate expected VOR for each player based on preseason projections

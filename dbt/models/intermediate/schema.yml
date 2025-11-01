@@ -100,3 +100,40 @@ models:
         description: Actual wins minus expected wins (core luck metric)
         tests:
           - not_null
+
+  - name: int_historical_ppg_by_rank
+    description: >
+      Historical average points per game by position and positional rank.
+      Uses current season performance data to build more realistic PPG estimates
+      than hardcoded tiers for the pick-value curve. Includes smoothing across
+      nearby ranks to handle small sample sizes.
+
+      CAVEAT: This creates look-ahead bias when used for preseason projections.
+      Long-term solution is FantasyPros API integration (task #16).
+    columns:
+      - name: position
+        description: Player position (QB, RB, WR, TE)
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['QB', 'RB', 'WR', 'TE']
+      - name: rank_position
+        description: Positional rank (1 = best at position, 2 = second best, etc.)
+        tests:
+          - not_null
+      - name: historical_avg_ppg
+        description: Raw average PPG for this position/rank
+        tests:
+          - not_null
+      - name: historical_stddev_ppg
+        description: Standard deviation of PPG for this position/rank
+      - name: sample_size
+        description: Number of players used to calculate the average
+        tests:
+          - not_null
+      - name: smoothed_ppg
+        description: >
+          Smoothed PPG estimate using ±2 rank window.
+          This is more stable for ranks with small sample sizes.
+        tests:
+          - not_null

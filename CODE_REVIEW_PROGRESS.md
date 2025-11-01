@@ -18,7 +18,7 @@ Current status: Not started
   isn't actually MC
 - [x] **#5 - K/DEF Inconsistency** - Excluded from grading but shown in UI
 - [x] **#6 - Sample Size for Uncertainty** - Showing CI after only 2 games
-- [ ] **#7 - Crude PPG Estimates** - Pick-value curve uses hardcoded tiers
+- [x] **#7 - Crude PPG Estimates** - Pick-value curve uses hardcoded tiers
 - [ ] **#8 - No Trade Tracking** - Draft grades don't update after trades
 
 ## Suggestions (Nice to Have)
