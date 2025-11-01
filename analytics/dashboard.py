@@ -1013,7 +1013,7 @@ elif page == "🎯 Draft Analysis":
             filtered_df["games_played"].max() if not filtered_df.empty else 8
         )
         MIN_AVAILABILITY_PCT = 0.60
-        min_games_threshold = max(3, int(weeks_completed * MIN_AVAILABILITY_PCT))
+        min_games_threshold = max(5, int(weeks_completed * MIN_AVAILABILITY_PCT))
 
         st.markdown(
             f"""
@@ -1021,7 +1021,7 @@ elif page == "🎯 Draft Analysis":
         - **Wide confidence intervals** = High volatility, boom-or-bust player
         - **Narrow confidence intervals** = Consistent, reliable floor
         - Uncertainty decreases as season progresses (more data)
-        - *Showing players with ≥{min_games_threshold} games ({int(MIN_AVAILABILITY_PCT*100)}% availability through Week {weeks_completed})*
+        - *Showing players with ≥{min_games_threshold} games for reliable estimates (minimum {int(MIN_AVAILABILITY_PCT*100)}% availability through Week {weeks_completed})*
         """
         )
 
@@ -1085,7 +1085,7 @@ elif page == "🎯 Draft Analysis":
                 st.plotly_chart(fig, use_container_width=True)
         else:
             st.info(
-                "📊 Uncertainty data will appear after Week 2 (need 2+ games for variance calculations)"
+                "📊 Uncertainty data will appear after Week 5 (need 5+ games for reliable variance estimates)"
             )
 
         # ========== SECTION 3: VALUE CURVE ANALYSIS ==========

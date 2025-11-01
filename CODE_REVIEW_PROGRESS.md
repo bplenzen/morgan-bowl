@@ -16,8 +16,8 @@ Current status: Not started
 
 - [x] **#4 - Rename "Monte Carlo"** - int_monte_carlo_expected_wins.sql
   isn't actually MC
-- [ ] **#5 - K/DEF Inconsistency** - Excluded from grading but shown in UI
-- [ ] **#6 - Sample Size for Uncertainty** - Showing CI after only 2 games
+- [x] **#5 - K/DEF Inconsistency** - Excluded from grading but shown in UI
+- [x] **#6 - Sample Size for Uncertainty** - Showing CI after only 2 games
 - [ ] **#7 - Crude PPG Estimates** - Pick-value curve uses hardcoded tiers
 - [ ] **#8 - No Trade Tracking** - Draft grades don't update after trades
 
