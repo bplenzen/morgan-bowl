@@ -987,17 +987,28 @@ elif page == "🎯 Draft Analysis":
         st.markdown("---")
         st.subheader("📊 Confidence Interval Analysis")
 
+        # Calculate dynamic threshold
+        weeks_completed = (
+            filtered_df["games_played"].max() if not filtered_df.empty else 8
+        )
+        MIN_AVAILABILITY_PCT = 0.60
+        min_games_threshold = max(3, int(weeks_completed * MIN_AVAILABILITY_PCT))
+
         st.markdown(
-            """
+            f"""
         **Understanding Uncertainty:**
         - **Wide confidence intervals** = High volatility, boom-or-bust player
         - **Narrow confidence intervals** = Consistent, reliable floor
         - Uncertainty decreases as season progresses (more data)
+        - *Showing players with ≥{min_games_threshold} games ({int(MIN_AVAILABILITY_PCT*100)}% availability through Week {weeks_completed})*
         """
         )
 
-        # Filter to players with uncertainty data (2+ games)
-        with_uncertainty = filtered_df[filtered_df["vor_uncertainty"].notna()].copy()
+        # Filter to players with uncertainty data AND sufficient sample size (calculated above)
+        with_uncertainty = filtered_df[
+            (filtered_df["vor_uncertainty"].notna())
+            & (filtered_df["games_played"] >= min_games_threshold)
+        ].copy()
 
         if not with_uncertainty.empty:
             # VOR confidence interval chart (top 30 picks)
@@ -1051,60 +1062,6 @@ elif page == "🎯 Draft Analysis":
                 )
 
                 st.plotly_chart(fig, use_container_width=True)
-
-            # Most/Least certain players
-            col1, col2 = st.columns(2)
-            with col1:
-                st.subheader("🎯 Most Certain (Narrow CI)")
-                certain = with_uncertainty.nsmallest(5, "vor_uncertainty")
-                certain_cols = [
-                    "player_name",
-                    "position",
-                    "position_display",
-                    "adj_vor",
-                    "vor_uncertainty",
-                    "consistency_tier",
-                ]
-                st.dataframe(
-                    certain[certain_cols].style.apply(style_position_row, axis=1),
-                    hide_index=True,
-                    column_config={
-                        "player_name": "Player",
-                        "position": None,  # Hide for styling
-                        "position_display": "Pos",  # Show formatted
-                        "adj_vor": st.column_config.NumberColumn("VOR", format="%.1f"),
-                        "vor_uncertainty": st.column_config.NumberColumn(
-                            "Uncertainty", format="%.1f"
-                        ),
-                        "consistency_tier": "Consistency",
-                    },
-                )
-
-            with col2:
-                st.subheader("🎲 Most Uncertain (Wide CI)")
-                uncertain = with_uncertainty.nlargest(5, "vor_uncertainty")
-                uncertain_cols = [
-                    "player_name",
-                    "position",
-                    "position_display",
-                    "adj_vor",
-                    "vor_uncertainty",
-                    "consistency_tier",
-                ]
-                st.dataframe(
-                    uncertain[uncertain_cols].style.apply(style_position_row, axis=1),
-                    hide_index=True,
-                    column_config={
-                        "player_name": "Player",
-                        "position": None,  # Hide for styling
-                        "position_display": "Pos",  # Show formatted
-                        "adj_vor": st.column_config.NumberColumn("VOR", format="%.1f"),
-                        "vor_uncertainty": st.column_config.NumberColumn(
-                            "Uncertainty", format="%.1f"
-                        ),
-                        "consistency_tier": "Consistency",
-                    },
-                )
         else:
             st.info(
                 "📊 Uncertainty data will appear after Week 2 (need 2+ games for variance calculations)"
@@ -1118,8 +1075,9 @@ elif page == "🎯 Draft Analysis":
             """
         **Value vs Expected:**
         - Shows how each pick performed vs expected value at that draft position
-        - **Positive = Steal** (got more value than expected)
-        - **Negative = Reach** (got less value than expected)
+        - **Positive = Steal** (exceeded expectations - great outcome)
+        - **Negative = Disappointment** (fell short of expectations - injury, underperformance, etc.)
+        - *Note: This measures outcomes, not draft decisions. Injured players show as disappointments even if the pick made sense.*
         """
         )
 
@@ -1199,7 +1157,7 @@ elif page == "🎯 Draft Analysis":
                 )
 
             with col2:
-                st.subheader("📉 Biggest Reaches")
+                st.subheader("💔 Biggest Disappointments")
                 reaches = active_picks.nsmallest(5, "value_vs_expected")
                 reaches_cols = [
                     "draft_pick",
@@ -1225,7 +1183,7 @@ elif page == "🎯 Draft Analysis":
                             "Actual", format="%.1f"
                         ),
                         "value_vs_expected": st.column_config.NumberColumn(
-                            "Deficit", format="%.1f"
+                            "Shortfall", format="%.1f"
                         ),
                     },
                 )
