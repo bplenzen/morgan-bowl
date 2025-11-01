@@ -133,7 +133,11 @@ draft_pick_mapping as (
     select
         *,
         row_number() over (order by preseason_adp) as pick_no,
-        ceil(row_number() over (order by preseason_adp) / (select total_rosters from {{ ref('stg_league') }})) as round
+        ceil(
+            row_number() over (order by preseason_adp)
+            / (select total_rosters from {{ ref('stg_league') }}
+            )
+        ) as round
     from preseason_expected_vor
     where preseason_adp <= 150  -- Typical draft depth
 ),
