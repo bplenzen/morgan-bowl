@@ -331,6 +331,105 @@ if page == "📊 Standings":
     )
     st.plotly_chart(fig, use_container_width=True)
 
+    st.markdown("---")
+    st.header("📊 Playoff Probability")
+
+    @st.cache_data
+    def load_playoff_probability(_db_mtime):
+        """Load playoff probability projections"""
+        try:
+            conn = get_db_connection(_db_mtime)
+            return conn.execute(
+                """
+                SELECT
+                    manager_name,
+                    current_wins,
+                    current_losses,
+                    games_remaining,
+                    round(expected_final_wins, 1) as proj_wins,
+                    round(playoff_probability_pct, 1) as playoff_pct,
+                    playoff_status
+                FROM main_analytics.int_playoff_probability
+                ORDER BY playoff_pct DESC
+                """
+            ).df()
+        except Exception as e:
+            st.error(f"⚠️ Could not load playoff probabilities: {str(e)}")
+            return pd.DataFrame()
+
+    playoff_df = load_playoff_probability(get_db_mtime())
+
+    if not playoff_df.empty:
+        # Playoff probability visualization
+        fig = go.Figure()
+
+        # Color by playoff status
+        colors = []
+        for status in playoff_df["playoff_status"]:
+            if status == "SAFE":
+                colors.append("#2ecc71")  # Green
+            elif status == "LIKELY":
+                colors.append("#3498db")  # Blue
+            elif status == "BUBBLE":
+                colors.append("#f39c12")  # Orange
+            else:
+                colors.append("#e74c3c")  # Red
+
+        fig.add_trace(
+            go.Bar(
+                x=playoff_df["manager_name"],
+                y=playoff_df["playoff_pct"],
+                marker_color=colors,
+                text=playoff_df["playoff_pct"].apply(lambda x: f"{x}%"),
+                textposition="outside",
+                name="Playoff %",
+            )
+        )
+
+        fig.update_layout(
+            title="Playoff Probability (%)",
+            xaxis_title="Manager",
+            yaxis_title="Playoff Probability (%)",
+            yaxis_range=[0, 105],
+            showlegend=False,
+            height=500,
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Playoff probability table
+        st.dataframe(
+            playoff_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "manager_name": "Manager",
+                "current_wins": "W",
+                "current_losses": "L",
+                "games_remaining": "Remaining",
+                "proj_wins": st.column_config.NumberColumn(
+                    "Projected Wins", format="%.1f"
+                ),
+                "playoff_pct": st.column_config.ProgressColumn(
+                    "Playoff %",
+                    format="%.1f%%",
+                    min_value=0,
+                    max_value=100,
+                ),
+                "playoff_status": "Status",
+            },
+        )
+
+        st.markdown(
+            """
+        **Methodology**: Uses team scoring distributions + remaining schedule to estimate playoff odds.
+        - **SAFE** (>80%): Very likely to make playoffs
+        - **LIKELY** (60-80%): Favored to make playoffs
+        - **BUBBLE** (40-60%): Coin flip, must win key games
+        - **LONGSHOT** (<40%): Needs help + strong finish
+        """
+        )
+
 elif page == "🤓 Luck Analysis":
     st.header("🤓 Advanced Luck Analytics")
 
