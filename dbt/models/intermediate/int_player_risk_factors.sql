@@ -129,15 +129,23 @@ risk_adjusted_vor as (
         ) as composite_risk_factor,
 
         -- Calculate base VOR (current season vs draft-day baseline)
+        -- Use actual replacement-level PPG from current rankings, not ADP
         case
             when prc.points_per_game is not null
                 then
                     (
                         prc.points_per_game
-                        - (
-                            select replacement_adp from draft_day_baseline
-                            where position = prc.position limit 1
-                        ) / 17.0  -- Rough PPG estimate from ADP
+                        - coalesce((
+                            select points_per_game
+                            from current_rankings
+                            where position = prc.position
+                              and current_rank_position = (
+                                  select replacement_rank
+                                  from draft_day_baseline
+                                  where position = prc.position
+                                  limit 1
+                              )
+                        ), 0)
                     ) * prc.games_played
             else 0
         end as base_vor_estimate,
@@ -225,12 +233,17 @@ with_uncertainty as (
                             from weekly_variance as wv
                             where wv.player_id = fra.player_id
                         )
-                        - (
-                            select replacement_adp
-                            from draft_day_baseline
+                        - coalesce((
+                            select points_per_game
+                            from current_rankings
                             where position = fra.position
-                            limit 1
-                        ) / 17.0
+                              and current_rank_position = (
+                                  select replacement_rank
+                                  from draft_day_baseline
+                                  where position = fra.position
+                                  limit 1
+                              )
+                        ), 0)
                     )
                     * fra.games_played
                     * fra.scarcity_multiplier
@@ -256,12 +269,17 @@ with_uncertainty as (
                             from weekly_variance as wv
                             where wv.player_id = fra.player_id
                         )
-                        - (
-                            select replacement_adp
-                            from draft_day_baseline
+                        - coalesce((
+                            select points_per_game
+                            from current_rankings
                             where position = fra.position
-                            limit 1
-                        ) / 17.0
+                              and current_rank_position = (
+                                  select replacement_rank
+                                  from draft_day_baseline
+                                  where position = fra.position
+                                  limit 1
+                              )
+                        ), 0)
                     )
                     * fra.games_played
                     * fra.scarcity_multiplier

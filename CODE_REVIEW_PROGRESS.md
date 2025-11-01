@@ -5,13 +5,17 @@ Current status: Not started
 
 ## Critical Issues (Must Fix First)
 
-- [ ] **#1 - VOR Calculation Bug** - int_player_risk_factors.sql uses ADP as PPG
-- [ ] **#2 - Risk Tier Mismatch** - VERY_LOW_RISK vs LOW_RISK naming inconsistency
-- [ ] **#3 - Hardcoded League Size** - int_expected_value_by_pick.sql assumes 10 teams
+- [x] **#1 - VOR Calculation Bug** - int_player_risk_factors.sql uses ADP
+  as PPG
+- [ ] **#2 - Risk Tier Mismatch** - VERY_LOW_RISK vs LOW_RISK naming
+  inconsistency
+- [ ] **#3 - Hardcoded League Size** - int_expected_value_by_pick.sql
+  assumes 10 teams
 
 ## Warnings (High Priority)
 
-- [ ] **#4 - Rename "Monte Carlo"** - int_monte_carlo_expected_wins.sql isn't actually MC
+- [ ] **#4 - Rename "Monte Carlo"** - int_monte_carlo_expected_wins.sql
+  isn't actually MC
 - [ ] **#5 - K/DEF Inconsistency** - Excluded from grading but shown in UI
 - [ ] **#6 - Sample Size for Uncertainty** - Showing CI after only 2 games
 - [ ] **#7 - Crude PPG Estimates** - Pick-value curve uses hardcoded tiers
