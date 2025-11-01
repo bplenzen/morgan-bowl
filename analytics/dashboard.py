@@ -27,6 +27,12 @@ POSITION_COLORS = {
 def style_position_row(row):
     """Apply background color to entire row based on position"""
     position = row.get("position", "")
+
+    # K/DEF: Gray out (streaming positions)
+    if position in ("K", "DEF"):
+        return ["background-color: #f5f5f5; opacity: 0.6" for _ in row]
+
+    # Regular positions: color by position
     bg_color = POSITION_COLORS.get(position, "white")
     return [f"background-color: {bg_color}" for _ in row]
 
@@ -870,6 +876,16 @@ elif page == "🎯 Draft Analysis":
             format_position_with_rank, axis=1
         )
 
+        # Replace NULL pick_grades with explanation for K/DEF (streaming positions)
+        filtered_df["pick_grade"] = filtered_df.apply(
+            lambda row: (
+                "N/A (Streaming)"
+                if row["position"] in ["K", "DEF"]
+                else row["pick_grade"]
+            ),
+            axis=1,
+        )
+
         # Simple view: Just the essentials
         # Note: Keep "position" for styling, display "position_display" to user
         display_cols = [
@@ -898,9 +914,14 @@ elif page == "🎯 Draft Analysis":
             "draft_pick": "Pick",
             "player_name": "Player",
             "position": None,  # Hide raw position column
-            "position_display": "Pos",  # Show formatted position
+            "position_display": st.column_config.TextColumn(
+                "Pos",
+                help="K/DEF are streaming positions and not graded for draft value",
+            ),
             "manager_name": "Manager",
-            "pick_grade": "Grade",
+            "pick_grade": st.column_config.TextColumn(
+                "Grade", help="Letter grade based on VOR. K/DEF not graded (streaming)"
+            ),
             "value_verdict": "Verdict",
         }
 
