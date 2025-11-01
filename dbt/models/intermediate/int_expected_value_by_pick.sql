@@ -24,7 +24,11 @@ then drafting a player projected for 30 VOR is a -20 reach,
 while getting someone projected for 70 VOR is a +20 value pick.
 */
 
-with preseason_rankings as (
+with league_config as (
+    select total_rosters from {{ ref('stg_league') }}
+),
+
+preseason_rankings as (
     select * from {{ ref('stg_preseason_rankings') }}
 ),
 
@@ -59,7 +63,8 @@ preseason_with_projected_ppg as (
         rl.estimated_replacement_ppg,
         rl.scarcity_multiplier,
 
-        -- Rough PPG projection from ADP (better would be actual expert projections)
+        -- Rough PPG projection from ADP
+        -- Better would be actual expert projections
         -- This decay curve approximates typical preseason projections
         case
             when pr.position = 'QB'
@@ -115,7 +120,8 @@ preseason_expected_vor as (
         estimated_replacement_ppg,
         scarcity_multiplier,
 
-        -- Expected VOR = (Projected PPG - Replacement PPG) × Expected Games × Scarcity
+        -- Expected VOR = (Projected PPG - Replacement PPG)
+        --                × Expected Games × Scarcity
         -- Assume 15 games played for preseason projections (conservative)
         (projected_ppg - estimated_replacement_ppg)
         * 15
@@ -131,15 +137,14 @@ preseason_expected_vor as (
 -- This creates a synthetic "expected draft order" from ADP
 draft_pick_mapping as (
     select
-        *,
-        row_number() over (order by preseason_adp) as pick_no,
+        pev.*,
+        row_number() over (order by pev.preseason_adp) as pick_no,
         ceil(
-            row_number() over (order by preseason_adp)
-            / (select total_rosters from {{ ref('stg_league') }}
-            )
+            row_number() over (order by pev.preseason_adp) / lc.total_rosters
         ) as round
-    from preseason_expected_vor
-    where preseason_adp <= 150  -- Typical draft depth
+    from preseason_expected_vor as pev
+    cross join league_config as lc
+    where pev.preseason_adp <= 150  -- Typical draft depth
 ),
 
 -- Smooth expected VOR using moving average (LOESS approximation)
