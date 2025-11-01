@@ -1,7 +1,7 @@
 # Code Review Progress Tracker
 
 Last updated: 2025-11-01
-Current status: Not started
+Current status: In progress (9/21 complete)
 
 ## Critical Issues (Must Fix First)
 
@@ -19,11 +19,11 @@ Current status: Not started
 - [x] **#5 - K/DEF Inconsistency** - Excluded from grading but shown in UI
 - [x] **#6 - Sample Size for Uncertainty** - Showing CI after only 2 games
 - [x] **#7 - Crude PPG Estimates** - Pick-value curve uses hardcoded tiers
-- [ ] **#8 - No Trade Tracking** - Draft grades don't update after trades
+- [x] **#8 - No Trade Tracking** - Draft grades don't update after trades
 
 ## Suggestions (Nice to Have)
 
-- [ ] **#9 - Boris Chen Tiers** - Add color-coded tier visualizations
+- [x] **#9 - Boris Chen Tiers** - Add color-coded tier visualizations
 - [ ] **#10 - Playoff Probability** - Add "67% to make playoffs" calculator
 - [ ] **#11 - Spike Weeks** - Add JJ Zachariason's top-12 weeks metric
 - [ ] **#12 - ROS Rankings** - Show rest-of-season projections

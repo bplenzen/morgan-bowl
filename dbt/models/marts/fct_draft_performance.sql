@@ -646,7 +646,29 @@ draft_with_grades as (
                     'Late pick that did not pan out - low cost'
 
             else 'Performance evaluation in progress'
-        end as value_verdict
+        end as value_verdict,
+
+        -- VOR TIER: Boris Chen style tiers for easy scanning
+        case
+            when position in ('K', 'DEF') then null  -- No tiers for streaming
+            when risk_adjusted_scarcity_vor >= 80 then 'TIER_1_ELITE'
+            when risk_adjusted_scarcity_vor >= 60 then 'TIER_2_HIGH'
+            when risk_adjusted_scarcity_vor >= 40 then 'TIER_3_SOLID'
+            when risk_adjusted_scarcity_vor >= 20 then 'TIER_4_DEPTH'
+            when risk_adjusted_scarcity_vor >= 0 then 'TIER_5_REPLACEMENT'
+            else 'TIER_6_BUST'
+        end as vor_tier,
+
+        -- User-friendly tier label
+        case
+            when position in ('K', 'DEF') then null
+            when risk_adjusted_scarcity_vor >= 80 then 'Elite'
+            when risk_adjusted_scarcity_vor >= 60 then 'High Value'
+            when risk_adjusted_scarcity_vor >= 40 then 'Solid Starter'
+            when risk_adjusted_scarcity_vor >= 20 then 'Depth/Flex'
+            when risk_adjusted_scarcity_vor >= 0 then 'Replacement'
+            else 'Bust'
+        end as vor_tier_label
 
     from draft_with_vor
 ),

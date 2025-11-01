@@ -37,6 +37,30 @@ def style_position_row(row):
     return [f"background-color: {bg_color}" for _ in row]
 
 
+# VOR Tier color mapping (Boris Chen style)
+VOR_TIER_COLORS = {
+    "Elite": "#2ecc71",  # Green - top tier
+    "High Value": "#3498db",  # Blue - strong value
+    "Solid Starter": "#f39c12",  # Orange - solid
+    "Depth/Flex": "#95a5a6",  # Gray - depth piece
+    "Replacement": "#e74c3c",  # Red - replacement level
+    "Bust": "#c0392b",  # Dark red - negative value
+}
+
+
+def get_tier_emoji(tier_label):
+    """Add emoji for quick visual scan"""
+    tier_emojis = {
+        "Elite": "🌟",
+        "High Value": "⭐",
+        "Solid Starter": "✅",
+        "Depth/Flex": "📊",
+        "Replacement": "⚠️",
+        "Bust": "❌",
+    }
+    return tier_emojis.get(tier_label, "")
+
+
 # Page config
 st.set_page_config(
     page_title="Morgan Bowl Analytics",
@@ -205,6 +229,8 @@ def load_draft_performance(_db_mtime):
                 value_verdict,
                 consistency_tier,
                 risk_tier,
+                vor_tier,
+                vor_tier_label,
                 draft_day_opportunity_cost,
                 games_played
             FROM main_analytics.fct_draft_performance
@@ -699,6 +725,16 @@ elif page == "🎯 Draft Analysis":
     """
     )
 
+    st.info(
+        """
+        **📌 Note on Draft Grades & Trades:**
+        Draft grades reflect the quality of the **original draft decision** made by the drafter.
+        If a player was later traded to another team, the grade still applies to the manager who
+        drafted them, not the current owner. This evaluates the *draft-day decision quality*,
+        separate from trade outcomes.
+        """
+    )
+
     with st.expander("📖 How does this actually work? (Click to learn more)"):
         st.markdown(
             """
@@ -894,6 +930,7 @@ elif page == "🎯 Draft Analysis":
             "position",
             "position_display",
             "manager_name",
+            "vor_tier_label",  # NEW: Boris Chen style tier
             "pick_grade",
             "value_verdict",
         ]
@@ -901,10 +938,10 @@ elif page == "🎯 Draft Analysis":
         # Advanced view: Add technical stats
         if show_uncertainty:
             display_cols.insert(
-                5, "adj_vor"
-            )  # After manager_name (adjusted for extra col)
-            display_cols.insert(6, "vor_uncertainty")  # After adj_vor
-            display_cols.insert(8, "grade_uncertainty")  # After pick_grade
+                6, "adj_vor"
+            )  # After vor_tier_label (adjusted for extra col)
+            display_cols.insert(7, "vor_uncertainty")  # After adj_vor
+            display_cols.insert(9, "grade_uncertainty")  # After pick_grade
 
         # Apply position-based row coloring
         styled_df = filtered_df[display_cols].style.apply(style_position_row, axis=1)
@@ -919,6 +956,10 @@ elif page == "🎯 Draft Analysis":
                 help="K/DEF are streaming positions and not graded for draft value",
             ),
             "manager_name": "Manager",
+            "vor_tier_label": st.column_config.TextColumn(
+                "Tier",
+                help="Boris Chen style value tier (Elite > High > Solid > Depth > Replacement)",
+            ),
             "pick_grade": st.column_config.TextColumn(
                 "Grade", help="Letter grade based on VOR. K/DEF not graded (streaming)"
             ),
@@ -1232,6 +1273,31 @@ elif page == "🎯 Draft Analysis":
             },
         )
         st.plotly_chart(fig, use_container_width=True)
+
+        # Value Tier distribution chart (Boris Chen style)
+        st.subheader("Value Tier Distribution")
+        tier_counts = filtered_df[filtered_df["vor_tier_label"].notna()][
+            "vor_tier_label"
+        ].value_counts()
+        tier_order = [
+            "Elite",
+            "High Value",
+            "Solid Starter",
+            "Depth/Flex",
+            "Replacement",
+            "Bust",
+        ]
+        tier_counts = tier_counts.reindex(tier_order, fill_value=0)
+
+        fig_tier = px.bar(
+            x=tier_counts.index,
+            y=tier_counts.values,
+            labels={"x": "Tier", "y": "Count"},
+            title="Draft Picks by VOR Tier (Boris Chen Style)",
+            color=tier_counts.index,
+            color_discrete_map=VOR_TIER_COLORS,
+        )
+        st.plotly_chart(fig_tier, use_container_width=True)
 
         # Expandable detailed metrics
         with st.expander("📊 Advanced Metrics Breakdown"):
