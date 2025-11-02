@@ -222,17 +222,17 @@ models:
       - name: schedule_luck_index
         description: "Average opponent performance vs their season avg (positive = unlucky, negative = lucky)"
       - name: close_wins
-        description: "Wins in games decided by <10 points"
+        description: "Wins in games decided by <5 points"
         tests:
           - dbt_utils.expression_is_true:
               expression: ">= 0"
       - name: close_losses
-        description: "Losses in games decided by <10 points"
+        description: "Losses in games decided by <5 points"
         tests:
           - dbt_utils.expression_is_true:
               expression: ">= 0"
       - name: total_close_games
-        description: "Total games decided by <10 points"
+        description: "Total games decided by <5 points"
         tests:
           - dbt_utils.expression_is_true:
               expression: ">= 0"

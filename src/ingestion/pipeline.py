@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, Mapping, Sequence
 
@@ -168,7 +168,7 @@ def run_ingestion(
         ValueError: If week validation fails
         Exception: If API calls or data processing fails
     """
-    run_id = datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%S")
+    run_id = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
     logger.info(
         "ingestion_started",
         run_id=run_id,

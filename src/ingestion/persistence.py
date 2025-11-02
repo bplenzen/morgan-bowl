@@ -160,3 +160,100 @@ class DataStore:
             raise RuntimeError(
                 f"Failed to write table '{name}' in mode '{mode}': {e}"
             ) from e
+
+    def write_many_tables(
+        self,
+        tables: dict[str, Iterable[Mapping]],
+        *,
+        mode: str = "replace",
+    ) -> None:
+        """Write multiple tables using a single database connection.
+
+        This is more efficient than calling write_table() multiple times
+        because it reuses a single connection for all writes, reducing
+        connection overhead.
+
+        Args:
+            tables: Dictionary mapping table names to record iterables
+            mode: Write mode - 'replace' or 'append' (applied to all tables)
+
+        Raises:
+            ValueError: If any table name is invalid or mode is unsupported
+            RuntimeError: If database operation fails
+
+        Example:
+            store.write_many_tables({
+                "league": [league_data],
+                "users": user_records,
+                "rosters": roster_records,
+            })
+        """
+        if mode not in ("replace", "append"):
+            raise ValueError(f"Invalid mode: '{mode}'. Must be 'replace' or 'append'")
+
+        # Validate all table names upfront
+        for name in tables.keys():
+            _validate_identifier(name, "table name")
+
+        # Convert all records to Polars DataFrames upfront
+        frames = {}
+        for name, records in tables.items():
+            frame = pl.DataFrame(records)
+            if frame.is_empty():
+                logger.warning("no_data_to_write", table=name)
+                continue
+            frames[name] = frame
+
+        if not frames:
+            logger.warning("no_tables_to_write", tables=list(tables.keys()))
+            return
+
+        try:
+            with self.connect() as conn:
+                for name, frame in frames.items():
+                    quoted_table = f'"{self.schema}"."{name}"'
+                    view_name = f"_tmp_pl_frame_{id(frame)}"
+
+                    try:
+                        conn.register(view_name, frame)
+
+                        if mode == "replace":
+                            conn.execute(f"DROP TABLE IF EXISTS {quoted_table}")
+                            conn.execute(
+                                f"CREATE TABLE {quoted_table} AS SELECT * FROM {view_name}"
+                            )
+                        else:  # append
+                            conn.execute(
+                                f"CREATE TABLE IF NOT EXISTS {quoted_table} AS SELECT * FROM {view_name} LIMIT 0"
+                            )
+                            conn.execute(
+                                f"INSERT INTO {quoted_table} SELECT * FROM {view_name}"
+                            )
+
+                        logger.info(
+                            "table_written",
+                            table=name,
+                            mode=mode,
+                            rows=len(frame),
+                        )
+                    finally:
+                        conn.unregister(view_name)
+
+            logger.info(
+                "batch_write_completed",
+                tables_written=list(frames.keys()),
+                mode=mode,
+                total_tables=len(frames),
+            )
+
+        except Exception as e:
+            logger.error(
+                "batch_write_failed",
+                tables=list(tables.keys()),
+                mode=mode,
+                error=str(e),
+                error_type=type(e).__name__,
+            )
+            raise RuntimeError(
+                f"Failed to write tables in batch mode '{mode}': {e}"
+            ) from e

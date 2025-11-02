@@ -102,7 +102,9 @@ class SleeperClient:
                     raise
                 time.sleep(delay)
                 delay *= 2
-        raise RuntimeError("Unreachable retry loop exhausted")
+        # Defensive: Should never reach here due to raises above, but included for type safety
+        # and as a safety net if retry logic is modified
+        raise RuntimeError("Retry loop exhausted unexpectedly")
 
     @staticmethod
     def _should_retry(status_code: int) -> bool:
