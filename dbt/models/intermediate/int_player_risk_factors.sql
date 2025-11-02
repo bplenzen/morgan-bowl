@@ -295,6 +295,7 @@ with_uncertainty as (
         end as risk_adjusted_vor_upper_bound,
 
         -- Uncertainty width (how wide is the confidence interval?)
+        -- Cap uncertainty at 2x point estimate for players with meaningful VOR
         case
             when
                 fra.games_played > 0 and exists (
@@ -302,18 +303,39 @@ with_uncertainty as (
                     from weekly_variance as wv
                     where wv.player_id = fra.player_id
                 )
-                then round(
-                    2.0
-                    * (
-                        select stddev_weekly_points
-                        from weekly_variance as wv
-                        where wv.player_id = fra.player_id
-                    )
-                    * fra.games_played
-                    * fra.scarcity_multiplier
-                    * fra.composite_risk_factor,
-                    2
-                )
+                then
+                    case
+                        -- For meaningful VOR (>10), cap uncertainty at 2x point estimate
+                        when abs(fra.risk_adjusted_scarcity_vor) > 10
+                            then round(
+                                least(
+                                    2.0
+                                    * (
+                                        select stddev_weekly_points
+                                        from weekly_variance as wv
+                                        where wv.player_id = fra.player_id
+                                    )
+                                    * fra.games_played
+                                    * fra.scarcity_multiplier
+                                    * fra.composite_risk_factor,
+                                    abs(fra.risk_adjusted_scarcity_vor) * 2.0
+                                ),
+                                2
+                            )
+                        -- For low VOR players, use uncapped calculation
+                        else round(
+                            2.0
+                            * (
+                                select stddev_weekly_points
+                                from weekly_variance as wv
+                                where wv.player_id = fra.player_id
+                            )
+                            * fra.games_played
+                            * fra.scarcity_multiplier
+                            * fra.composite_risk_factor,
+                            2
+                        )
+                    end
             else 0.0
         end as vor_uncertainty_range,
 
