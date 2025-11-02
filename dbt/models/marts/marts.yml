@@ -11,6 +11,8 @@ models:
         description: "Week number of the NFL season"
         tests:
           - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
       - name: matchup_id
         description: "Unique identifier for the matchup (same for both teams in H2H)"
         tests:
@@ -47,6 +49,14 @@ models:
         description: "Display name of opponent manager"
       - name: opponent_points
         description: "Total points scored by opponent"
+        tests:
+          - not_null:
+              config:
+                where: "opponent_roster_id is not null"
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "opponent_points is not null"
       - name: point_diff
         description: "Points differential (points - opponent_points)"
       - name: win_flag
@@ -257,6 +267,10 @@ models:
         description: "0-100 scale combining luck factors. 50 = average, >50 = lucky, <50 = unlucky. Formula: 50 + (wins_over_expected × 10)"
         tests:
           - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+          - dbt_utils.expression_is_true:
+              expression: "<= 100"
       - name: schedule_difficulty
         description: "Human-readable schedule difficulty rating"
         tests:
