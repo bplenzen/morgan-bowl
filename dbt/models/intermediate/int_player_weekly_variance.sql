@@ -11,20 +11,42 @@ Calculates weekly performance metrics for each player to measure:
 Used to distinguish reliable starters from volatile boom/bust players.
 */
 
-with weekly_stats as (
+with player_metadata as (
     select
         player_id,
-        week,
-        pts_ppr as weekly_points
-    from {{ ref('stg_player_stats') }}
+        player_name,
+        position,
+        team
+    from {{ ref('stg_draft_picks') }}
+    where position in ('QB', 'RB', 'WR', 'TE')  -- Only skill positions
+),
+
+weekly_stats as (
+    select
+        ps.player_id,
+        pm.player_name,
+        pm.position,
+        pm.team,
+        ps.week,
+        ps.pts_ppr as weekly_points,
+        -- Weekly positional rank (for spike week calculation)
+        row_number() over (
+            partition by ps.week, pm.position
+            order by ps.pts_ppr desc
+        ) as weekly_position_rank
+    from {{ ref('stg_player_stats') }} as ps
+    inner join player_metadata as pm on ps.player_id = pm.player_id
     where
-        pts_ppr is not null
-        and pts_ppr > 0  -- Exclude DNPs
+        ps.pts_ppr is not null
+        and ps.pts_ppr > 0  -- Exclude DNPs
 ),
 
 player_aggregates as (
     select
         player_id,
+        max(player_name) as player_name,  -- Aggregate function for GROUP BY
+        max(position) as position,
+        max(team) as team,
 
         -- Basic stats
         count(*) as weeks_played,
@@ -75,13 +97,42 @@ boom_bust_calc as (
     group by ws.player_id, pa.avg_weekly_points
 ),
 
+-- Calculate spike weeks (JJ Zachariason method)
+-- Spike Weeks = Top-12 positional finishes (WR1/RB1 performances)
+-- Research shows spike weeks predict playoff success better than avg PPG
+spike_weeks_calc as (
+    select
+        ws.player_id,
+        -- Spike weeks: Top-12 positional finishes
+        count(
+            case when ws.weekly_position_rank <= 12 then 1 end
+        ) as spike_weeks,
+        -- Elite spike weeks: Top-6 finishes (true WR1/RB1 weeks)
+        count(
+            case when ws.weekly_position_rank <= 6 then 1 end
+        ) as elite_spike_weeks,
+        -- Average rank when they spike (quality of spike weeks)
+        avg(
+            case
+                when ws.weekly_position_rank <= 12
+                    then ws.weekly_position_rank
+            end
+        ) as avg_spike_rank
+    from weekly_stats as ws
+    group by ws.player_id
+),
+
 with_boom_bust as (
     select
         pa.*,
         bb.boom_weeks,
-        bb.bust_weeks
+        bb.bust_weeks,
+        sw.spike_weeks,
+        sw.elite_spike_weeks,
+        sw.avg_spike_rank
     from player_aggregates as pa
     left join boom_bust_calc as bb on pa.player_id = bb.player_id
+    left join spike_weeks_calc as sw on pa.player_id = sw.player_id
 ),
 
 final as (
@@ -103,6 +154,14 @@ final as (
             else 0
         end as bust_rate_pct,
 
+        -- Spike week rate (JJ Zachariason method)
+        case
+            when weeks_played > 0
+                then
+                    round(100.0 * spike_weeks / weeks_played, 1)
+            else 0
+        end as spike_week_rate_pct,
+
         -- Consistency tier (lower CV = more consistent)
         -- CV Thresholds: Educated guesses from 2025 data
         -- QBs avg CV=0.33, RB/WR avg CV=0.55
@@ -120,6 +179,20 @@ final as (
             when coefficient_of_variation < 1.00 then 'VOLATILE'
             else 'BOOM_BUST'  -- High variance (CV ≥ 1.0)
         end as consistency_tier,
+
+        -- Spike tier (JJ Zachariason championship upside metric)
+        -- How often does this player deliver WR1/RB1 weeks?
+        case
+            -- 50%+ spike weeks
+            when spike_week_rate_pct >= 50 then 'ELITE_SPIKER'
+            when spike_week_rate_pct >= 35 then 'STRONG_SPIKER'      -- 35-50%
+            when spike_week_rate_pct >= 20 then 'MODERATE_SPIKER'    -- 20-35%
+            when spike_week_rate_pct >= 10 then 'OCCASIONAL_SPIKER'  -- 10-20%
+            else 'LOW_SPIKE'                                          -- <10%
+        end as spike_tier,
+
+        -- Championship upside flag (elite spike weeks >= 3)
+        coalesce(elite_spike_weeks >= 3, false) as championship_upside,
 
         -- Risk score (0-100, higher = more risky)
         -- Components: volatility (CV) + boom/bust tendency

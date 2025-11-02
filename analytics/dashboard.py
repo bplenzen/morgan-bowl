@@ -199,42 +199,50 @@ def load_advanced_luck(_db_mtime):
 
 @st.cache_data
 def load_draft_performance(_db_mtime):
-    """Load draft analysis with grades and metrics (including NEW uncertainty quantification)"""
+    """Load draft analysis with grades and metrics (including NEW uncertainty quantification and spike weeks)"""
     try:
         conn = get_db_connection(_db_mtime)
         return conn.execute(
             """
             SELECT
-                pick_no,
-                round,
-                player_name,
-                position,
-                current_rank_position,
-                manager_name,
-                round(value_over_replacement, 1) as vor,
-                round(risk_adjusted_scarcity_vor, 1) as adj_vor,
+                dp.pick_no,
+                dp.round,
+                dp.player_name,
+                dp.position,
+                dp.current_rank_position,
+                dp.manager_name,
+                round(dp.value_over_replacement, 1) as vor,
+                round(dp.risk_adjusted_scarcity_vor, 1) as adj_vor,
                 -- NEW: Uncertainty metrics
-                round(risk_adjusted_vor_lower_bound, 1) as vor_lower,
-                round(risk_adjusted_vor_upper_bound, 1) as vor_upper,
-                round(vor_uncertainty_range, 1) as vor_uncertainty,
-                round(grade_score_lower_bound, 1) as grade_lower,
-                round(grade_score_upper_bound, 1) as grade_upper,
-                round(grade_score_uncertainty, 1) as grade_uncertainty,
+                round(dp.risk_adjusted_vor_lower_bound, 1) as vor_lower,
+                round(dp.risk_adjusted_vor_upper_bound, 1) as vor_upper,
+                round(dp.vor_uncertainty_range, 1) as vor_uncertainty,
+                round(dp.grade_score_lower_bound, 1) as grade_lower,
+                round(dp.grade_score_upper_bound, 1) as grade_upper,
+                round(dp.grade_score_uncertainty, 1) as grade_uncertainty,
                 -- NEW: Pick-value curve metrics
-                round(expected_vor_at_pick, 1) as expected_vor,
-                expected_value_tier,
-                round(risk_adjusted_scarcity_vor - expected_vor_at_pick, 1) as value_vs_expected,
-                pick_grade,
-                grade_score,
-                value_verdict,
-                consistency_tier,
-                risk_tier,
-                vor_tier,
-                vor_tier_label,
-                draft_day_opportunity_cost,
-                games_played
-            FROM main_analytics.fct_draft_performance
-            ORDER BY pick_no
+                round(dp.expected_vor_at_pick, 1) as expected_vor,
+                dp.expected_value_tier,
+                round(dp.risk_adjusted_scarcity_vor - dp.expected_vor_at_pick, 1) as value_vs_expected,
+                dp.pick_grade,
+                dp.grade_score,
+                dp.value_verdict,
+                dp.consistency_tier,
+                dp.risk_tier,
+                dp.vor_tier,
+                dp.vor_tier_label,
+                dp.draft_day_opportunity_cost,
+                dp.games_played,
+                -- NEW: Spike weeks from variance metrics (JJ Zachariason method)
+                wpv.spike_weeks,
+                wpv.spike_week_rate_pct as spike_rate,
+                wpv.elite_spike_weeks as elite_spikes,
+                wpv.spike_tier,
+                wpv.championship_upside
+            FROM main_analytics.fct_draft_performance dp
+            LEFT JOIN main_analytics.int_player_weekly_variance wpv
+                ON dp.player_id = wpv.player_id
+            ORDER BY dp.pick_no
         """
         ).df()
     except Exception as e:
@@ -1450,6 +1458,76 @@ elif page == "🎯 Draft Analysis":
                     "draft_day_opportunity_cost": "Best Available (Passed)",
                 },
             )
+
+        with st.expander("🔥 Spike Weeks Analysis (Championship Upside)"):
+            st.markdown(
+                """
+                **Spike Weeks**: Games where a player finished **top-12 at their position** (WR1/RB1 performances).
+
+                Research by **JJ Zachariason** (Late Round Podcast) shows spike weeks predict playoff success
+                better than average PPG. A boom-bust WR averaging 12 PPG with 4 spike weeks can win championships
+                despite a mediocre season average.
+
+                **Why it matters**: Elite weekly performances matter more in playoffs than consistent mediocrity.
+                """
+            )
+
+            # Filter for players with meaningful games played
+            spike_df = filtered_df[
+                (filtered_df["games_played"] >= 5)
+                & (filtered_df["spike_weeks"].notna())
+            ].sort_values("spike_weeks", ascending=False)
+
+            if spike_df.empty:
+                st.info("No spike weeks data available for the selected filters.")
+            else:
+                st.dataframe(
+                    spike_df[
+                        [
+                            "player_name",
+                            "position_display",
+                            "games_played",
+                            "spike_weeks",
+                            "spike_rate",
+                            "elite_spikes",
+                            "spike_tier",
+                            "adj_vor",
+                        ]
+                    ],
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "player_name": "Player",
+                        "position_display": "Pos",
+                        "games_played": "GP",
+                        "spike_weeks": st.column_config.NumberColumn(
+                            "Spike Weeks",
+                            help="Times finished top-12 at position",
+                        ),
+                        "spike_rate": st.column_config.NumberColumn(
+                            "Spike %",
+                            format="%.1f%%",
+                            help="Percentage of games with top-12 finish",
+                        ),
+                        "elite_spikes": st.column_config.NumberColumn(
+                            "Elite Spikes",
+                            help="Times finished top-6 at position (true WR1/RB1 weeks)",
+                        ),
+                        "spike_tier": st.column_config.TextColumn(
+                            "Spike Tier",
+                            help="ELITE_SPIKER (50%+) → LOW_SPIKE (<10%)",
+                        ),
+                        "adj_vor": st.column_config.NumberColumn("VOR", format="%.1f"),
+                    },
+                )
+
+                # Show championship upside flags
+                championship_players = spike_df[spike_df["championship_upside"]]
+                if not championship_players.empty:
+                    st.success(
+                        f"🏆 **Championship Upside Players** (3+ elite spikes): "
+                        f"{', '.join(championship_players['player_name'].tolist())}"
+                    )
 
         st.markdown("---")
         st.markdown(
