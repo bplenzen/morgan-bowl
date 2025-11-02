@@ -1117,11 +1117,6 @@ elif page == "🎯 Draft Analysis":
         st.markdown("---")
         st.subheader("📋 All Draft Picks")
 
-        # Add uncertainty toggle (default OFF for simplicity)
-        show_uncertainty = st.checkbox(
-            "Show Advanced Stats (VOR, Uncertainty)", value=False
-        )
-
         # Create draft pick notation (e.g., 1.01, 2.12)
         filtered_df = filtered_df.copy()
         filtered_df["draft_pick"] = filtered_df.apply(
@@ -1161,31 +1156,66 @@ elif page == "🎯 Draft Analysis":
             axis=1,
         )
 
-        # Simple view: Just the essentials
-        # Note: Keep "position" for styling, display "position_display" to user
+        # Create formatted columns with ± notation for uncertainty
+        if (
+            "vor_uncertainty" in filtered_df.columns
+            and "adj_vor" in filtered_df.columns
+        ):
+            filtered_df["vor_display"] = filtered_df.apply(
+                lambda row: (
+                    f"{row['adj_vor']:.1f} ± {row['vor_uncertainty']/2:.1f}"
+                    if pd.notna(row["vor_uncertainty"])
+                    and pd.notna(row["adj_vor"])
+                    and row["vor_uncertainty"] > 0
+                    else f"{row['adj_vor']:.1f}" if pd.notna(row["adj_vor"]) else ""
+                ),
+                axis=1,
+            )
+        else:
+            filtered_df["vor_display"] = filtered_df["adj_vor"].apply(
+                lambda x: f"{x:.1f}" if pd.notna(x) else ""
+            )
+
+        if (
+            "grade_uncertainty" in filtered_df.columns
+            and "grade_score" in filtered_df.columns
+        ):
+            filtered_df["grade_display"] = filtered_df.apply(
+                lambda row: (
+                    f"{row['grade_score']:.0f} ± {row['grade_uncertainty']/2:.0f}"
+                    if pd.notna(row["grade_uncertainty"])
+                    and pd.notna(row["grade_score"])
+                    and row["grade_uncertainty"] > 0
+                    else (
+                        f"{row['grade_score']:.0f}"
+                        if pd.notna(row["grade_score"])
+                        else ""
+                    )
+                ),
+                axis=1,
+            )
+        else:
+            filtered_df["grade_display"] = filtered_df["grade_score"].apply(
+                lambda x: f"{x:.0f}" if pd.notna(x) else ""
+            )
+
+        # Display columns with formatted uncertainty
         display_cols = [
             "draft_pick",
             "player_name",
             "position",
             "position_display",
             "manager_name",
-            "vor_tier_label",  # NEW: Boris Chen style tier
+            "vor_display",  # Shows "67.3 ± 8.2" format
+            "vor_tier_label",  # Boris Chen style tier
             "pick_grade",
             "value_verdict",
         ]
 
-        # Advanced view: Add technical stats
-        if show_uncertainty:
-            display_cols.insert(
-                6, "adj_vor"
-            )  # After vor_tier_label (adjusted for extra col)
-            display_cols.insert(7, "vor_uncertainty")  # After adj_vor
-            display_cols.insert(9, "grade_uncertainty")  # After pick_grade
-
         # Apply position-based row coloring
         styled_df = filtered_df[display_cols].style.apply(style_position_row, axis=1)
 
-        # Column configuration (only used if columns are displayed)
+        # Column configuration with uncertainty always visible
         column_config = {
             "draft_pick": "Pick",
             "player_name": "Player",
@@ -1195,6 +1225,10 @@ elif page == "🎯 Draft Analysis":
                 help="K/DEF are streaming positions and not graded for draft value",
             ),
             "manager_name": "Manager",
+            "vor_display": st.column_config.TextColumn(
+                "VOR ± CI",
+                help="Value Over Replacement with 95% confidence interval (wider = more volatile)",
+            ),
             "vor_tier_label": st.column_config.TextColumn(
                 "Tier",
                 help="Boris Chen style value tier (Elite > High > Solid > Depth > Replacement)",
@@ -1204,20 +1238,6 @@ elif page == "🎯 Draft Analysis":
             ),
             "value_verdict": "Verdict",
         }
-
-        # Add advanced column configs only if showing them
-        if show_uncertainty:
-            column_config["adj_vor"] = st.column_config.NumberColumn(
-                "Adj VOR", format="%.1f", help="Value Over Replacement (risk-adjusted)"
-            )
-            column_config["vor_uncertainty"] = st.column_config.NumberColumn(
-                "VOR ±",
-                format="%.1f",
-                help="Uncertainty range (wider = more volatile)",
-            )
-            column_config["grade_uncertainty"] = st.column_config.NumberColumn(
-                "Grade ±", format="%.1f", help="Grade uncertainty"
-            )
 
         st.dataframe(
             styled_df,
@@ -1237,8 +1257,7 @@ elif page == "🎯 Draft Analysis":
                 "position",
                 "position_display",
                 "pick_grade",
-                "adj_vor",
-                "grade_uncertainty",
+                "vor_display",
             ]
             st.dataframe(
                 best[best_cols].style.apply(style_position_row, axis=1),
@@ -1249,9 +1268,9 @@ elif page == "🎯 Draft Analysis":
                     "position": None,  # Hide for styling
                     "position_display": "Pos",  # Show formatted
                     "pick_grade": "Grade",
-                    "adj_vor": st.column_config.NumberColumn("Adj VOR", format="%.1f"),
-                    "grade_uncertainty": st.column_config.NumberColumn(
-                        "±", format="%.1f"
+                    "vor_display": st.column_config.TextColumn(
+                        "VOR ± CI",
+                        help="Value Over Replacement with confidence interval",
                     ),
                 },
             )
@@ -1265,8 +1284,7 @@ elif page == "🎯 Draft Analysis":
                 "position",
                 "position_display",
                 "pick_grade",
-                "adj_vor",
-                "grade_uncertainty",
+                "vor_display",
             ]
             st.dataframe(
                 worst[worst_cols].style.apply(style_position_row, axis=1),
@@ -1277,9 +1295,9 @@ elif page == "🎯 Draft Analysis":
                     "position": None,  # Hide for styling
                     "position_display": "Pos",  # Show formatted
                     "pick_grade": "Grade",
-                    "adj_vor": st.column_config.NumberColumn("Adj VOR", format="%.1f"),
-                    "grade_uncertainty": st.column_config.NumberColumn(
-                        "±", format="%.1f"
+                    "vor_display": st.column_config.TextColumn(
+                        "VOR ± CI",
+                        help="Value Over Replacement with confidence interval",
                     ),
                 },
             )
