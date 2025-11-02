@@ -22,14 +22,16 @@ class TestDashboardHasErrorHandling:
 
         # Check that each load function has a try-except
         functions_to_check = [
-            "def load_standings():",
-            "def load_weekly_performance():",
-            "def load_advanced_luck():",
+            "load_standings",
+            "load_weekly_performance",
+            "load_advanced_luck",
+            "load_draft_performance",
         ]
 
         for func_name in functions_to_check:
-            # Find the function definition
-            func_start = dashboard_code.find(func_name)
+            # Find the function definition (match any parameter list)
+            func_pattern = f"def {func_name}("
+            func_start = dashboard_code.find(func_pattern)
             assert func_start != -1, f"Function {func_name} not found"
 
             # Find the next function (to know where this one ends)
@@ -63,6 +65,7 @@ class TestDashboardHasErrorHandling:
         assert "Could not load standings" in dashboard_code
         assert "Could not load weekly performance" in dashboard_code
         assert "Could not load advanced luck" in dashboard_code
+        assert "Could not load draft analysis" in dashboard_code
 
 
 # LEARNING NOTES
