@@ -267,6 +267,7 @@ with st.sidebar:
             "🤓 Luck Analysis",
             "📈 Weekly Performance",
             "🎯 Draft Analysis",
+            "🔮 Rest-of-Season Rankings",
         ],
     )
 
@@ -1533,6 +1534,144 @@ elif page == "🎯 Draft Analysis":
         st.markdown(
             "*🎓 Methodology: Combines historical performance, consistency metrics, injury risk, and positional scarcity. See docs/DRAFT_ANALYSIS_METHODOLOGY.md for details.*"
         )
+
+elif page == "🔮 Rest-of-Season Rankings":
+    st.header("🔮 Rest-of-Season (ROS) Projections")
+
+    st.markdown(
+        """
+    **ROS rankings weight recent performance more heavily** and adjust for availability.
+    Use these for trade decisions and rest-of-season lineup planning.
+
+    - **Trending Up 🔥**: ROS rank >> Season rank (buy low candidate)
+    - **Trending Down ❄️**: ROS rank << Season rank (sell high candidate)
+    """
+    )
+
+    @st.cache_data
+    def load_ros_rankings(_db_mtime):
+        """Load rest-of-season projections"""
+        try:
+            conn = get_db_connection(_db_mtime)
+            return conn.execute(
+                """
+                SELECT
+                    ros.player_name,
+                    ros.position,
+                    ros.ros_rank_position as ros_rank,
+                    cr.current_rank_position as season_rank,
+                    ros.ros_rank_position - cr.current_rank_position as rank_change,
+                    ros.ros_adjusted_ppg as ros_ppg,
+                    cr.points_per_game as season_ppg,
+                    ros.projection_confidence,
+                    ros.ros_tier
+                FROM main_analytics.int_ros_player_rankings ros
+                LEFT JOIN main_analytics.int_current_player_rankings cr
+                    ON ros.player_id = cr.player_id
+                WHERE ros.recent_games >= 3
+                ORDER BY ros.ros_rank_position
+                """
+            ).df()
+        except Exception as e:
+            st.error(f"⚠️ Could not load ROS rankings: {str(e)}")
+            return pd.DataFrame()
+
+    ros_df = load_ros_rankings(get_db_mtime())
+
+    if not ros_df.empty:
+        # Position filter
+        positions = ["All"] + sorted(ros_df["position"].unique().tolist())
+        selected_position = st.selectbox("Filter by Position:", positions)
+
+        if selected_position != "All":
+            ros_df = ros_df[ros_df["position"] == selected_position]
+
+        # Add trend indicator
+        ros_df["trend"] = ros_df["rank_change"].apply(
+            lambda x: (
+                "🔥 Trending Up"
+                if x < -5
+                else ("❄️ Trending Down" if x > 5 else "➡️ Steady")
+            )
+        )
+
+        # Display table
+        st.dataframe(
+            ros_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "player_name": "Player",
+                "position": "Pos",
+                "season_rank": st.column_config.NumberColumn("Season Rank"),
+                "ros_rank": st.column_config.NumberColumn("ROS Rank"),
+                "rank_change": st.column_config.NumberColumn(
+                    "Change",
+                    help="Negative = trending up, Positive = trending down",
+                    format="%+d",
+                ),
+                "season_ppg": st.column_config.NumberColumn(
+                    "Season PPG", format="%.1f"
+                ),
+                "ros_ppg": st.column_config.NumberColumn("ROS PPG", format="%.1f"),
+                "projection_confidence": "Confidence",
+                "ros_tier": "ROS Tier",
+                "trend": "Trend",
+            },
+        )
+
+        # Biggest risers and fallers
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.subheader("🔥 Biggest Risers (Buy Low)")
+            risers = ros_df.nsmallest(10, "rank_change")
+            st.dataframe(
+                risers[
+                    [
+                        "player_name",
+                        "position",
+                        "season_rank",
+                        "ros_rank",
+                        "rank_change",
+                    ]
+                ],
+                hide_index=True,
+            )
+
+        with col2:
+            st.subheader("❄️ Biggest Fallers (Sell High)")
+            fallers = ros_df.nlargest(10, "rank_change")
+            st.dataframe(
+                fallers[
+                    [
+                        "player_name",
+                        "position",
+                        "season_rank",
+                        "ros_rank",
+                        "rank_change",
+                    ]
+                ],
+                hide_index=True,
+            )
+
+        st.markdown("---")
+        st.markdown(
+            """
+        **Methodology:**
+        - Uses exponentially weighted moving average (EWMA) to emphasize recent games
+        - Last 6 weeks weighted most heavily (recent weeks = 2× → 8× weight)
+        - Availability discount for missed games (injury/bye concerns)
+        - Minimum 3 games required for projection
+
+        **How to use:**
+        - Players trending up may have recovered from injury or increased role
+        - Players trending down may be dealing with injuries or declining usage
+        - Use with trade analyzer to identify buy-low / sell-high opportunities
+        """
+        )
+    else:
+        st.info("ROS rankings will be available after Week 6 (need 3+ recent games)")
 
 # Footer
 st.markdown("---")
