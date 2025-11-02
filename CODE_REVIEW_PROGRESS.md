@@ -1,7 +1,7 @@
 # Code Review Progress Tracker
 
 Last updated: 2025-11-01
-Current status: In progress (12/21 complete)
+Current status: In progress (13/21 complete)
 
 ## Critical Issues (Must Fix First)
 
@@ -27,7 +27,7 @@ Current status: In progress (12/21 complete)
 - [x] **#10 - Playoff Probability** - Add "67% to make playoffs" calculator
 - [x] **#11 - Spike Weeks** - Add JJ Zachariason's top-12 weeks metric
 - [x] **#12 - ROS Rankings** - Show rest-of-season projections
-- [ ] **#13 - Luck Formula Docs** - Link to calibration notebook
+- [x] **#13 - Luck Formula Docs** - Link to calibration notebook
 - [ ] **#14 - Uncertainty Toggle** - Default to ON instead of OFF
 - [ ] **#15 - Trade Analyzer** - Add trade evaluation tool
 - [ ] **#16 - FantasyPros API** - Integrate consensus projections
