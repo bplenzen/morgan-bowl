@@ -5,6 +5,7 @@ models:
     description: "League metadata with standardized field names and configuration settings."
     columns:
       - name: league_id
+        description: "Unique identifier for the Sleeper league."
         tests:
           - not_null
           - unique
@@ -12,6 +13,8 @@ models:
         description: "League display name from Sleeper."
       - name: season
         description: "Season year (e.g., '2025')."
+        tests:
+          - not_null
       - name: total_rosters
         description: "Total number of teams in the league."
         tests:
@@ -24,32 +27,140 @@ models:
         description: "Week number when playoffs begin."
       - name: status
         description: "League status: 'pre_draft', 'drafting', 'in_season', or 'complete'."
+
   - name: stg_users
     description: "Normalized view of Sleeper users for the league."
     columns:
       - name: user_id
+        description: "Unique identifier for the user/manager."
         tests:
           - not_null
           - unique
+      - name: display_name
+        description: "User's display name on Sleeper."
+        tests:
+          - not_null
+
   - name: stg_rosters
     description: "Normalized roster view including owner relationships."
     columns:
       - name: roster_id
+        description: "Unique identifier for the roster/team."
         tests:
           - not_null
           - unique
       - name: owner_id
+        description: "User ID of the team owner."
         tests:
           - not_null
+
   - name: stg_matchups
     description: "Union of matchup results across ingested weeks."
     columns:
       - name: week
+        description: "Week number of the matchup."
         tests:
           - not_null
       - name: matchup_id
+        description: "Identifier grouping two teams in a head-to-head matchup."
         tests:
           - not_null
       - name: roster_id
+        description: "Team participating in the matchup."
         tests:
           - not_null
+      - name: points
+        description: "Fantasy points scored by the team in the matchup."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: true
+
+  - name: stg_draft_picks
+    description: "Cleaned draft picks data with player metadata and draft position information."
+    columns:
+      - name: draft_id
+        description: "Unique identifier for the draft."
+        tests:
+          - not_null
+      - name: pick_no
+        description: "Overall pick number in the draft (e.g., 1-120 for 10-team, 12-round draft)."
+        tests:
+          - not_null
+      - name: player_id
+        description: "Sleeper player ID for the drafted player."
+        tests:
+          - not_null
+      - name: roster_id
+        description: "Team that made the draft pick."
+        tests:
+          - not_null
+      - name: round
+        description: "Draft round number."
+      - name: draft_slot
+        description: "Draft position within the round (e.g., 1-10 for 10-team league)."
+      - name: player_name
+        description: "Concatenated first and last name of the player."
+      - name: position
+        description: "Player's position (QB, RB, WR, TE, etc.)."
+      - name: draft_tier
+        description: "Calculated draft tier based on round (e.g., 'Elite (Round 1)', 'Deep Sleeper (9+)')."
+
+  - name: stg_player_stats
+    description: "Unified player statistics across all ingested weeks, dynamically unioned from weekly source tables."
+    columns:
+      - name: player_id
+        description: "Sleeper player ID."
+        tests:
+          - not_null
+      - name: week
+        description: "Week number for the statistics."
+        tests:
+          - not_null
+      - name: season
+        description: "Season year for the statistics."
+        tests:
+          - not_null
+      - name: pts_ppr
+        description: "Fantasy points in PPR scoring."
+      - name: pts_half_ppr
+        description: "Fantasy points in half-PPR scoring."
+      - name: pts_std
+        description: "Fantasy points in standard scoring."
+      - name: gp
+        description: "Games played."
+      - name: gms_active
+        description: "Games active."
+
+  - name: stg_preseason_rankings
+    description: "Preseason ADP and rankings data for draft analysis, representing player valuations at draft time."
+    columns:
+      - name: player_id
+        description: "Sleeper player ID."
+        tests:
+          - not_null
+          - unique
+      - name: player_name
+        description: "Player's full name."
+      - name: position
+        description: "Player's position (QB, RB, WR, TE)."
+      - name: team
+        description: "NFL team abbreviation."
+      - name: preseason_adp
+        description: "Average draft position in preseason rankings."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: false
+      - name: preseason_rank_overall
+        description: "Overall rank in preseason rankings."
+      - name: preseason_rank_position
+        description: "Positional rank in preseason rankings."
+      - name: preseason_tier
+        description: "Preseason tier classification."
+      - name: position_group
+        description: "Simplified position grouping (QB, RB, WR, TE, OTHER)."
