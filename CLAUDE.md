@@ -1,5 +1,13 @@
 # CLAUDE.md
 
+> **📌 LEAGUE BRANCH NOTE**
+> This branch (`league-1251634383610187776`) is configured for **"The Uptown Letdowns"** fantasy football league.
+>
+> - League ID: `1251634383610187776`
+> - Season: 2025
+> - Team Count: 10 teams (not 12)
+> - For the main Morgan Bowl 4.0 league, switch to the `main` branch.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
