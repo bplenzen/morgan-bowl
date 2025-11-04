@@ -1,8 +1,8 @@
 """
-🏈 Morgan Bowl Fantasy Football Dashboard
+🏈 Fantasy Football Analytics Dashboard
 Interactive analytics for league members to explore standings, luck, and performance.
 
-Last updated: 2025-10-28 (Week 8)
+Dynamically displays data for any Sleeper fantasy football league.
 """
 
 from pathlib import Path
@@ -61,33 +61,7 @@ def get_tier_emoji(tier_label):
     return tier_emojis.get(tier_label, "")
 
 
-# Page config
-st.set_page_config(
-    page_title="Morgan Bowl Analytics",
-    page_icon="🏈",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-# Custom CSS
-st.markdown(
-    """
-    <style>
-    .main {
-        padding: 2rem;
-    }
-    .stMetric {
-        background-color: #f0f2f6;
-        padding: 1rem;
-        border-radius: 0.5rem;
-    }
-    </style>
-""",
-    unsafe_allow_html=True,
-)
-
-
-# Database connection
+# Database connection (must be defined before page config to load league name)
 def get_db_path():
     """Get the path to the DuckDB warehouse"""
     return Path(__file__).parent.parent / "data" / "warehouse.duckdb"
@@ -110,6 +84,47 @@ def get_db_connection(_db_mtime):
     """
     db_path = get_db_path()
     return duckdb.connect(str(db_path), read_only=True)
+
+
+@st.cache_data
+def load_league_info(_db_mtime):
+    """Load league name from database"""
+    try:
+        conn = get_db_connection(_db_mtime)
+        result = conn.execute("SELECT name FROM staging.league").fetchone()
+        return result[0] if result else "Fantasy Football"
+    except Exception:
+        return "Fantasy Football"
+
+
+# Load league info for page config
+db_mtime = get_db_mtime()
+league_name = load_league_info(db_mtime)
+
+# Page config
+st.set_page_config(
+    page_title=f"{league_name} Analytics",
+    page_icon="🏈",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# Custom CSS
+st.markdown(
+    """
+    <style>
+    .main {
+        padding: 2rem;
+    }
+    .stMetric {
+        background-color: #f0f2f6;
+        padding: 1rem;
+        border-radius: 0.5rem;
+    }
+    </style>
+""",
+    unsafe_allow_html=True,
+)
 
 
 @st.cache_data
@@ -251,8 +266,8 @@ def load_draft_performance(_db_mtime):
 
 
 # Header
-st.title("🏈 Morgan Bowl Fantasy Football Analytics")
-st.markdown("*Data-driven insights for the most competitive fantasy league*")
+st.title(f"🏈 {league_name} Fantasy Football Analytics")
+st.markdown("*Data-driven insights powered by advanced analytics*")
 
 # Sidebar
 with st.sidebar:
