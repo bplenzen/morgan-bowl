@@ -32,7 +32,7 @@ variables:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
       - .venv/
-      # DO NOT cache data/ - it contains warehouse.duckdb which should come from artifacts, not cache
+      - data/
 
 # Job 1: Weekly Data Ingestion
 ingest:weekly:
@@ -99,6 +99,7 @@ test:dbt:
   script:
     - echo "🧪 Running DBT tests..."
     - cd dbt
+    - poetry run dbt deps
     - poetry run dbt test --store-failures
   needs:
     - ingest:weekly
@@ -150,18 +151,30 @@ commit:data:
   stage: deploy
   image: alpine/git:latest
   script:
-    - echo "Committing updated data to repository"
+    - echo "📝 Committing updated data to repository..."
     - apk add --no-cache git
     - git config user.email "ci@morgan-bowl.pipeline"
     - git config user.name "Morgan Bowl CI/CD"
-    - cp -f data/warehouse.duckdb /tmp/db.backup
+    # Fetch latest to avoid conflicts
     - git fetch origin main
     - git checkout main
     - git pull origin main
-    - cp -f /tmp/db.backup data/warehouse.duckdb
+    # Stage the updated database
     - git add data/warehouse.duckdb
-    - git diff --staged --quiet && echo "No changes" || git commit -m "data update $(date +%Y-%m-%d)"
-    - git diff --staged --quiet || git push https://oauth2:${GITLAB_PUSH_TOKEN}@gitlab.com/bplenzen/morgan-bowl.git HEAD:main
+    # Only commit if there are changes
+    - |
+      if git diff --staged --quiet; then
+        echo "ℹ️ No changes to database, skipping commit"
+      else
+        git commit -m "data: Weekly ingestion update $(date +%Y-%m-%d)
+
+        Automated data update from GitLab CI/CD pipeline
+        - Updated warehouse.duckdb with latest Sleeper data
+        - Pipeline: $CI_PIPELINE_URL
+        - Triggered: $CI_PIPELINE_SOURCE"
+        git push https://oauth2:${GITLAB_PUSH_TOKEN}@gitlab.com/bplenzen/morgan-bowl.git HEAD:main
+        echo "✅ Successfully pushed updated data to GitLab"
+      fi
   needs:
     - ingest:weekly
     - test:dbt
@@ -169,7 +182,8 @@ commit:data:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "web"
-  allow_failure: true
+  # when: manual  # Removed to make deploy automatic
+  allow_failure: true  # Don't block pipeline if commit fails
 
 # Job 7: Mirror to GitHub (for Streamlit Cloud deployment)
 # Streamlit Cloud only supports GitHub, so we auto-mirror all commits
