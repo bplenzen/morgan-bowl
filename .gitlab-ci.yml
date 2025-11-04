@@ -204,7 +204,7 @@ mirror:github:
     - git config --global user.name "Morgan Bowl CI/CD"
     - git remote add github git@github.com:bplenzen/morgan-bowl.git || true
     # Mirror current branch to GitHub with same branch name
-    - git push github HEAD:${CI_COMMIT_BRANCH} --force
+    - git push github HEAD:refs/heads/${CI_COMMIT_BRANCH} --force
     - echo "✅ Successfully mirrored ${CI_COMMIT_BRANCH} to GitHub"
   needs:
     - job: commit:data
