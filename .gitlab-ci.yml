@@ -203,13 +203,15 @@ mirror:github:
     - git config --global user.email "ci@morgan-bowl.pipeline"
     - git config --global user.name "Morgan Bowl CI/CD"
     - git remote add github git@github.com:bplenzen/morgan-bowl.git || true
-    - git push github HEAD:main --force
-    - echo "✅ Successfully mirrored to GitHub"
+    # Mirror current branch to GitHub with same branch name
+    - git push github HEAD:${CI_COMMIT_BRANCH} --force
+    - echo "✅ Successfully mirrored ${CI_COMMIT_BRANCH} to GitHub"
   needs:
     - job: commit:data
       optional: true  # Only needed if commit:data ran (scheduled pipelines)
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH =~ /^league-/  # Mirror all league branches
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "web"
   allow_failure: true  # Don't block pipeline if GitHub mirror fails
