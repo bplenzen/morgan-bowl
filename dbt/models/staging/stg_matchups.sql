@@ -79,6 +79,42 @@ with unioned as (
         roster_id,
         points
     from {{ source('staging', 'matchups_week_09') }}
+
+    union all
+
+    select
+        10 as week,
+        matchup_id,
+        roster_id,
+        points
+    from {{ source('staging', 'matchups_week_10') }}
+
+    union all
+
+    select
+        11 as week,
+        matchup_id,
+        roster_id,
+        points
+    from {{ source('staging', 'matchups_week_11') }}
+
+    union all
+
+    select
+        12 as week,
+        matchup_id,
+        roster_id,
+        points
+    from {{ source('staging', 'matchups_week_12') }}
+
+    union all
+
+    select
+        13 as week,
+        matchup_id,
+        roster_id,
+        points
+    from {{ source('staging', 'matchups_week_13') }}
 )
 
 select
