@@ -341,103 +341,297 @@ if page == "📊 Standings":
     st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
-    st.header("📊 Playoff Probability")
+    st.header("🏆 Playoff Brackets")
 
     @st.cache_data
-    def load_playoff_probability(_db_mtime):
-        """Load playoff probability projections"""
+    def load_bracket_data(_db_mtime):
+        """Load playoff bracket data with seeding and matchups"""
         try:
             conn = get_db_connection(_db_mtime)
-            return conn.execute(
+            # Get seeding
+            standings = conn.execute(
                 """
                 SELECT
+                    ROW_NUMBER() OVER (ORDER BY wins DESC, points_for DESC) as seed,
                     manager_name,
-                    current_wins,
-                    current_losses,
-                    games_remaining,
-                    round(expected_final_wins, 1) as proj_wins,
-                    round(playoff_probability_pct, 1) as playoff_pct,
-                    playoff_status
-                FROM main_analytics.int_playoff_probability
-                ORDER BY playoff_pct DESC
+                    wins,
+                    losses,
+                    round(points_for, 2) as points_for
+                FROM main_analytics.fct_standings
+                ORDER BY seed
                 """
             ).df()
+
+            # Get playoff week scores (if available)
+            playoff_scores = conn.execute(
+                """
+                SELECT
+                    week,
+                    manager_name,
+                    round(points, 2) as points,
+                    win_flag
+                FROM main_analytics.fct_matchups
+                WHERE week >= 15
+                """
+            ).df()
+
+            return standings, playoff_scores
         except Exception as e:
-            st.error(f"⚠️ Could not load playoff probabilities: {str(e)}")
-            return pd.DataFrame()
+            st.error(f"⚠️ Could not load bracket data: {str(e)}")
+            return pd.DataFrame(), pd.DataFrame()
 
-    playoff_df = load_playoff_probability(get_db_mtime())
+    standings_df, playoff_scores_df = load_bracket_data(get_db_mtime())
 
-    if not playoff_df.empty:
-        # Playoff probability visualization
-        fig = go.Figure()
+    if not standings_df.empty:
+        # Helper function to get team display
+        def get_team_display(seed_num):
+            team = standings_df[standings_df["seed"] == seed_num].iloc[0]
+            return f"#{seed_num} {team['manager_name']}", team["manager_name"]
 
-        # Color by playoff status
-        colors = []
-        for status in playoff_df["playoff_status"]:
-            if status == "SAFE":
-                colors.append("#2ecc71")  # Green
-            elif status == "LIKELY":
-                colors.append("#3498db")  # Blue
-            elif status == "BUBBLE":
-                colors.append("#f39c12")  # Orange
-            else:
-                colors.append("#e74c3c")  # Red
-
-        fig.add_trace(
-            go.Bar(
-                x=playoff_df["manager_name"],
-                y=playoff_df["playoff_pct"],
-                marker_color=colors,
-                text=playoff_df["playoff_pct"].apply(lambda x: f"{x}%"),
-                textposition="outside",
-                name="Playoff %",
+        # Helper function to get score for a team in a week
+        def get_score(manager_name, week):
+            if playoff_scores_df.empty:
+                return None
+            scores = playoff_scores_df[
+                (playoff_scores_df["manager_name"] == manager_name)
+                & (playoff_scores_df["week"] == week)
+            ]
+            return (
+                scores["points"].iloc[0]
+                if not scores.empty and scores["points"].iloc[0] > 0
+                else None
             )
-        )
 
-        fig.update_layout(
-            title="Playoff Probability (%)",
-            xaxis_title="Manager",
-            yaxis_title="Playoff Probability (%)",
-            yaxis_range=[0, 105],
-            showlegend=False,
-            height=500,
-        )
+        # Create two columns for brackets
+        col1, col2 = st.columns(2)
 
-        st.plotly_chart(fig, use_container_width=True)
+        with col1:
+            st.subheader("🏆 Championship Bracket")
+            st.markdown("**Seeds 1-6 (Playoff Teams)**")
 
-        # Playoff probability table
-        st.dataframe(
-            playoff_df,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "manager_name": "Manager",
-                "current_wins": "W",
-                "current_losses": "L",
-                "games_remaining": "Remaining",
-                "proj_wins": st.column_config.NumberColumn(
-                    "Projected Wins", format="%.1f"
-                ),
-                "playoff_pct": st.column_config.ProgressColumn(
-                    "Playoff %",
-                    format="%.1f%%",
-                    min_value=0,
-                    max_value=100,
-                ),
-                "playoff_status": "Status",
-            },
-        )
+            # Round 1 (Week 15) - Seeds 3v6, 4v5
+            st.markdown("**Round 1 (Week 15)**")
 
-        st.markdown(
-            """
-        **Methodology**: Uses team scoring distributions + remaining schedule to estimate playoff odds.
-        - **SAFE** (>80%): Very likely to make playoffs
-        - **LIKELY** (60-80%): Favored to make playoffs
-        - **BUBBLE** (40-60%): Coin flip, must win key games
-        - **LONGSHOT** (<40%): Needs help + strong finish
-        """
-        )
+            seed3_display, seed3_name = get_team_display(3)
+            seed6_display, seed6_name = get_team_display(6)
+            seed4_display, seed4_name = get_team_display(4)
+            seed5_display, seed5_name = get_team_display(5)
+
+            score_3 = get_score(seed3_name, 15)
+            score_6 = get_score(seed6_name, 15)
+            score_4 = get_score(seed4_name, 15)
+            score_5 = get_score(seed5_name, 15)
+
+            # Matchup 1: 3v6
+            if score_3 is not None and score_6 is not None:
+                winner_36 = seed3_name if score_3 > score_6 else seed6_name
+                st.markdown(
+                    f"**{seed3_display}** {score_3:.1f} {'✅' if score_3 > score_6 else ''}"
+                )
+                st.markdown(
+                    f"**{seed6_display}** {score_6:.1f} {'✅' if score_6 > score_3 else ''}"
+                )
+            else:
+                st.markdown(f"**{seed3_display}** vs **{seed6_display}**")
+                winner_36 = "TBD"
+
+            st.markdown("")
+
+            # Matchup 2: 4v5
+            if score_4 is not None and score_5 is not None:
+                winner_45 = seed4_name if score_4 > score_5 else seed5_name
+                st.markdown(
+                    f"**{seed4_display}** {score_4:.1f} {'✅' if score_4 > score_5 else ''}"
+                )
+                st.markdown(
+                    f"**{seed5_display}** {score_5:.1f} {'✅' if score_5 > score_4 else ''}"
+                )
+            else:
+                st.markdown(f"**{seed4_display}** vs **{seed5_display}**")
+                winner_45 = "TBD"
+
+            st.markdown("---")
+            st.markdown("**Semifinals (Week 16)**")
+
+            seed1_display, seed1_name = get_team_display(1)
+            seed2_display, seed2_name = get_team_display(2)
+
+            # Semi 1: #1 vs winner of 4v5
+            if winner_45 != "TBD":
+                score_1 = get_score(seed1_name, 16)
+                score_45_winner = get_score(winner_45, 16)
+                if score_1 is not None and score_45_winner is not None:
+                    finalist_1 = seed1_name if score_1 > score_45_winner else winner_45
+                    st.markdown(
+                        f"**{seed1_display}** {score_1:.1f} {'✅' if score_1 > score_45_winner else ''}"
+                    )
+                    st.markdown(
+                        f"**{winner_45}** {score_45_winner:.1f} {'✅' if score_45_winner > score_1 else ''}"
+                    )
+                else:
+                    st.markdown(f"**{seed1_display}** vs **{winner_45}**")
+                    finalist_1 = "TBD"
+            else:
+                st.markdown(f"**{seed1_display}** (BYE) vs **Winner 4/5**")
+                finalist_1 = "TBD"
+
+            st.markdown("")
+
+            # Semi 2: #2 vs winner of 3v6
+            if winner_36 != "TBD":
+                score_2 = get_score(seed2_name, 16)
+                score_36_winner = get_score(winner_36, 16)
+                if score_2 is not None and score_36_winner is not None:
+                    finalist_2 = seed2_name if score_2 > score_36_winner else winner_36
+                    st.markdown(
+                        f"**{seed2_display}** {score_2:.1f} {'✅' if score_2 > score_36_winner else ''}"
+                    )
+                    st.markdown(
+                        f"**{winner_36}** {score_36_winner:.1f} {'✅' if score_36_winner > score_2 else ''}"
+                    )
+                else:
+                    st.markdown(f"**{seed2_display}** vs **{winner_36}**")
+                    finalist_2 = "TBD"
+            else:
+                st.markdown(f"**{seed2_display}** (BYE) vs **Winner 3/6**")
+                finalist_2 = "TBD"
+
+            st.markdown("---")
+            st.markdown("**🏆 Championship (Week 17)**")
+
+            if finalist_1 != "TBD" and finalist_2 != "TBD":
+                score_f1 = get_score(finalist_1, 17)
+                score_f2 = get_score(finalist_2, 17)
+                if score_f1 is not None and score_f2 is not None:
+                    champion = finalist_1 if score_f1 > score_f2 else finalist_2
+                    st.markdown(
+                        f"**{finalist_1}** {score_f1:.1f} {'🏆' if score_f1 > score_f2 else ''}"
+                    )
+                    st.markdown(
+                        f"**{finalist_2}** {score_f2:.1f} {'🏆' if score_f2 > score_f1 else ''}"
+                    )
+                else:
+                    st.markdown(f"**{finalist_1}** vs **{finalist_2}**")
+            else:
+                st.markdown("**Finalist 1** vs **Finalist 2**")
+
+        with col2:
+            st.subheader("🚽 Toilet Bowl")
+            st.markdown("**Seeds 7-12 (Consolation)**")
+
+            # Round 1 (Week 15) - Seeds 7v12, 8v11, 9v10
+            st.markdown("**Round 1 (Week 15)**")
+
+            seed7_display, seed7_name = get_team_display(7)
+            seed12_display, seed12_name = get_team_display(12)
+            seed8_display, seed8_name = get_team_display(8)
+            seed11_display, seed11_name = get_team_display(11)
+            seed9_display, seed9_name = get_team_display(9)
+            seed10_display, seed10_name = get_team_display(10)
+
+            score_7 = get_score(seed7_name, 15)
+            score_12 = get_score(seed12_name, 15)
+            score_8 = get_score(seed8_name, 15)
+            score_11 = get_score(seed11_name, 15)
+            score_9 = get_score(seed9_name, 15)
+            score_10 = get_score(seed10_name, 15)
+
+            # Matchup 1: 7v12
+            if score_7 is not None and score_12 is not None:
+                winner_712 = seed7_name if score_7 > score_12 else seed12_name
+                st.markdown(
+                    f"**{seed7_display}** {score_7:.1f} {'✅' if score_7 > score_12 else ''}"
+                )
+                st.markdown(
+                    f"**{seed12_display}** {score_12:.1f} {'✅' if score_12 > score_7 else ''}"
+                )
+            else:
+                st.markdown(f"**{seed7_display}** vs **{seed12_display}**")
+                winner_712 = "TBD"
+
+            st.markdown("")
+
+            # Matchup 2: 8v11
+            if score_8 is not None and score_11 is not None:
+                winner_811 = seed8_name if score_8 > score_11 else seed11_name
+                st.markdown(
+                    f"**{seed8_display}** {score_8:.1f} {'✅' if score_8 > score_11 else ''}"
+                )
+                st.markdown(
+                    f"**{seed11_display}** {score_11:.1f} {'✅' if score_11 > score_8 else ''}"
+                )
+            else:
+                st.markdown(f"**{seed8_display}** vs **{seed11_display}**")
+                winner_811 = "TBD"
+
+            st.markdown("")
+
+            # Matchup 3: 9v10
+            if score_9 is not None and score_10 is not None:
+                winner_910 = seed9_name if score_9 > score_10 else seed10_name
+                st.markdown(
+                    f"**{seed9_display}** {score_9:.1f} {'✅' if score_9 > score_10 else ''}"
+                )
+                st.markdown(
+                    f"**{seed10_display}** {score_10:.1f} {'✅' if score_10 > score_9 else ''}"
+                )
+            else:
+                st.markdown(f"**{seed9_display}** vs **{seed10_display}**")
+                winner_910 = "TBD"
+
+            st.markdown("---")
+            st.markdown("**Semifinals (Week 16)**")
+
+            # Toilet Bowl semis (winners from round 1)
+            if winner_712 != "TBD" and winner_910 != "TBD":
+                score_w712 = get_score(winner_712, 16)
+                score_w910 = get_score(winner_910, 16)
+                if score_w712 is not None and score_w910 is not None:
+                    tb_finalist_1 = (
+                        winner_712 if score_w712 > score_w910 else winner_910
+                    )
+                    st.markdown(
+                        f"**{winner_712}** {score_w712:.1f} {'✅' if score_w712 > score_w910 else ''}"
+                    )
+                    st.markdown(
+                        f"**{winner_910}** {score_w910:.1f} {'✅' if score_w910 > score_w712 else ''}"
+                    )
+                else:
+                    st.markdown(f"**{winner_712}** vs **{winner_910}**")
+                    tb_finalist_1 = "TBD"
+            else:
+                st.markdown("**Winner 7/12** vs **Winner 9/10**")
+                tb_finalist_1 = "TBD"
+
+            st.markdown("")
+
+            if winner_811 != "TBD":
+                # Assuming top seed gets a bye or plays winner
+                st.markdown(f"**{winner_811}** (advances)")
+                tb_finalist_2 = winner_811
+            else:
+                st.markdown("**Winner 8/11** (advances)")
+                tb_finalist_2 = "TBD"
+
+            st.markdown("---")
+            st.markdown("**🚽 Toilet Bowl (Week 17)**")
+
+            if tb_finalist_1 != "TBD" and tb_finalist_2 != "TBD":
+                score_tbf1 = get_score(tb_finalist_1, 17)
+                score_tbf2 = get_score(tb_finalist_2, 17)
+                if score_tbf1 is not None and score_tbf2 is not None:
+                    st.markdown(
+                        f"**{tb_finalist_1}** {score_tbf1:.1f} {'🚽' if score_tbf1 < score_tbf2 else ''}"
+                    )
+                    st.markdown(
+                        f"**{tb_finalist_2}** {score_tbf2:.1f} {'🚽' if score_tbf2 < score_tbf1 else ''}"
+                    )
+                    st.caption("🚽 = Toilet Bowl 'Winner' (Last Place)")
+                else:
+                    st.markdown(f"**{tb_finalist_1}** vs **{tb_finalist_2}**")
+            else:
+                st.markdown("**Finalist 1** vs **Finalist 2**")
+                st.caption("🚽 Winner gets last place!")
 
 elif page == "🤓 Luck Analysis":
     st.header("🤓 Advanced Luck Analytics")
