@@ -45,6 +45,8 @@ sources:
         description: "Week 16 matchup results."
       - name: matchups_week_17
         description: "Week 17 matchup results."
+      - name: matchups_week_18
+        description: "Week 18 matchup results."
       - name: transactions_week_01
         description: "Week 1 transactions (waivers/trades)."
       - name: transactions_week_02
