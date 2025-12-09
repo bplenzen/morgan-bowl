@@ -119,45 +119,70 @@ playoff_cutoff_estimate as (
     where rer.rank = lc.playoff_teams
 ),
 
+-- When regular season is complete (games_remaining = 0), rank by actual record
+with_actual_standings as (
+    select
+        efr.*,
+        cs.points_for,
+        -- Rank by wins then points_for (standard tiebreaker)
+        row_number() over (order by efr.current_wins desc, cs.points_for desc) as final_rank
+    from expected_final_record as efr
+    inner join current_standings as cs on efr.roster_id = cs.roster_id
+),
+
 final as (
     select
-        efr.roster_id,
-        efr.manager_name,
-        efr.current_wins,
-        efr.current_losses,
-        efr.games_remaining,
+        was.roster_id,
+        was.manager_name,
+        was.current_wins,
+        was.current_losses,
+        was.games_remaining,
         pce.cutoff_wins as playoff_cutoff_estimate,
-        round(efr.win_prob_per_game, 3) as win_prob_remaining_games,
-        round(efr.expected_final_wins, 1) as expected_final_wins,
-        round(efr.expected_wins_lower, 1) as expected_wins_lower,
+        round(was.win_prob_per_game, 3) as win_prob_remaining_games,
+        round(was.expected_final_wins, 1) as expected_final_wins,
+        round(was.expected_wins_lower, 1) as expected_wins_lower,
 
-        round(efr.expected_wins_upper, 1) as expected_wins_upper,
+        round(was.expected_wins_upper, 1) as expected_wins_upper,
 
-        -- Playoff probability (rough approximation)
-        -- P(final_wins > cutoff) using normal approximation
+        -- Playoff probability
+        -- If regular season is complete (games_remaining = 0), use actual standings
+        -- Otherwise use probabilistic calculation
         round(
-            1.0 / (1.0 + exp(
-                -(efr.expected_final_wins - pce.cutoff_wins)
-                / greatest(efr.final_wins_stddev, 0.5)
-            )) * 100,
+            case
+                when was.games_remaining = 0 then
+                    case
+                        when was.final_rank <= was.playoff_teams then 100.0
+                        else 0.0
+                    end
+                else
+                    1.0 / (1.0 + exp(
+                        -(was.expected_final_wins - pce.cutoff_wins)
+                        / greatest(was.final_wins_stddev, 0.5)
+                    )) * 100
+            end,
             1
         ) as playoff_probability_pct,
 
         case
+            when was.games_remaining = 0 then
+                case
+                    when was.final_rank <= was.playoff_teams then 'CLINCHED'
+                    else 'ELIMINATED'
+                end
             when
-                efr.expected_final_wins
-                > pce.cutoff_wins + efr.final_wins_stddev
+                was.expected_final_wins
+                > pce.cutoff_wins + was.final_wins_stddev
                 then 'SAFE'
-            when efr.expected_final_wins > pce.cutoff_wins
+            when was.expected_final_wins > pce.cutoff_wins
                 then 'LIKELY'
             when
-                efr.expected_final_wins
-                > pce.cutoff_wins - efr.final_wins_stddev
+                was.expected_final_wins
+                > pce.cutoff_wins - was.final_wins_stddev
                 then 'BUBBLE'
             else 'LONGSHOT'
         end as playoff_status
 
-    from expected_final_record as efr
+    from with_actual_standings as was
     cross join playoff_cutoff_estimate as pce
 )
 
