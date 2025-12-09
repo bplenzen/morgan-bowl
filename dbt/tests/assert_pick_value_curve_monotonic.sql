@@ -9,7 +9,7 @@ with pick_value_trends as (
         lag(expected_vor_at_pick) over (order by pick_no) as prev_pick_vor,
         expected_vor_at_pick - lag(expected_vor_at_pick) over (order by pick_no) as vor_change
     from {{ ref('int_expected_value_by_pick') }}
-    where pick_no between 1 and 120  -- Focus on typical draft range
+    where pick_no between 1 and 100  -- Focus on first ~8 rounds where data is most reliable
 ),
 
 unreasonable_increases as (
